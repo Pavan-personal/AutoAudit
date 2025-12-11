@@ -2,7 +2,6 @@ fastapi>=0.104.0
 uvicorn[standard]>=0.24.0
 python-dotenv>=1.0.0
 pydantic>=2.0.0
-torchdata>=0.9.0,<0.10.0
 oumi>=0.2.0,<0.3.0
 
 tree-sitter>=0.20.0
