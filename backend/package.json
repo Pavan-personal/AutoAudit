@@ -1,0 +1,60 @@
+{
+  "dependencies": {
+    "@prisma/client": "^6.5.0",
+    "@types/cors": "^2.8.17",
+    "bcryptjs": "^3.0.2",
+    "blocklock-js": "^1.0.0",
+    "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "ethers": "^6.15.0",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.2",
+    "pdf2json": "^3.1.4",
+    "pg": "^8.14.1",
+    "pre-commit": "^1.2.2",
+    "rimraf": "^6.0.1",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/cookie-parser": "^1.4.8",
+    "@types/express": "^5.0.1",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.19.2",
+    "nodemon": "^3.1.9",
+    "prisma": "^6.5.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  },
+  "name": "server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "lint": "eslint . --ext .ts",
+    "lint-fix": "eslint . --ext .ts --fix",
+    "dev": "nodemon ./src/server.ts",
+    "vercel-build": "echo Done running vercel-build."
+  },
+  "keywords": [
+    "typescript",
+    "expressjs",
+    "starter-template",
+    "starter-kit",
+    "vercel",
+    "vercel-deployment",
+    "expressjs-typescript-starter",
+    "expressjs-vercel",
+    "expressjs-deployment"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pavan-personal/mindmesh-ai.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": ""
+}
