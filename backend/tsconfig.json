@@ -3,6 +3,7 @@
     "moduleResolution": "node",
     "target": "es6",
     "lib": ["esnext"],
+    "types": ["node"],
     "module": "commonjs",
     "rootDir": ".",
     "sourceMap": true,
@@ -28,6 +29,6 @@
     "declaration": true,
     "declarationMap": true
   },
-  "include": ["src/**/*.ts", "public"],
+  "include": ["src/**/*.ts", "*.ts", "public"],
   "exclude": ["node_modules"]
 }

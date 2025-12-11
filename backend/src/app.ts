@@ -35,7 +35,7 @@ app.get("/health", (_req: express.Request, res: express.Response) => {
 app.get("/api/status", (_req: express.Request, res: express.Response) => {
   res.json({
     success: true,
-    message: "MindMesh QuizCraft API is running",
+    message: "Autoaudit backend is running",
     timestamp: new Date().toISOString(),
     endpoints: {
     }
