@@ -5,20 +5,45 @@ Returns GitHub issue-formatted results
 """
 
 import os
+import sys
+import logging
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 from dotenv import load_dotenv
-import sys
 from pathlib import Path
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 sys.path.insert(0, str(Path(__file__).parent))
-from analyzer import OumiAnalyzer
 
 load_dotenv()
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), '..', '.env'))
 
+logger.info("=" * 60)
+logger.info("🚀 Starting Oumi Code Analysis API")
+logger.info("=" * 60)
+logger.info(f"Python: {sys.version}")
+logger.info(f"Working directory: {os.getcwd()}")
+logger.info(f"OPENAI_API_KEY present: {'✅ YES' if os.getenv('OPENAI_API_KEY') else '❌ NO - REQUIRED!'}")
+
+try:
+    from analyzer import OumiAnalyzer
+    logger.info("✅ OumiAnalyzer imported successfully")
+    ANALYZER_AVAILABLE = True
+except Exception as e:
+    logger.error(f"❌ Failed to import OumiAnalyzer: {e}")
+    logger.error("This will cause API endpoints to fail!")
+    ANALYZER_AVAILABLE = False
+    OumiAnalyzer = None
+
 app = FastAPI(title="Oumi Code Analysis API", version="1.0.0")
+logger.info("✅ FastAPI app created")
 
 app.add_middleware(
     CORSMiddleware,
@@ -56,10 +81,17 @@ async def health():
 @app.post("/api/analyze")
 async def analyze_code(request: AnalysisRequest):
     """Analyze code files and return GitHub issue-formatted results."""
+    if not ANALYZER_AVAILABLE:
+        raise HTTPException(
+            status_code=503,
+            detail="OumiAnalyzer is not available. Check server logs for details."
+        )
+    
     try:
         if not request.files:
             raise HTTPException(status_code=400, detail="No files provided")
         
+        logger.info(f"Analyzing {len(request.files)} file(s)")
         analyzer = OumiAnalyzer()
         files_data = [{"path": f.path, "content": f.content} for f in request.files]
         analysis_types = request.options.type if request.options and request.options.type else ["bugs"]
@@ -72,6 +104,7 @@ async def analyze_code(request: AnalysisRequest):
             user_prompt=user_prompt
         )
         
+        logger.info(f"Analysis complete: {sum(len(r.get('issues', [])) for r in results)} issues found")
         return {
             "summary": {
                 "total_files": len(request.files),
@@ -83,10 +116,21 @@ async def analyze_code(request: AnalysisRequest):
         }
     
     except Exception as e:
+        logger.error(f"Analysis error: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Analysis error: {str(e)}")
+
+@app.on_event("startup")
+async def startup_event():
+    port = int(os.getenv("PORT", 8000))
+    logger.info("=" * 60)
+    logger.info(f"🎉 Server starting on port {port}")
+    logger.info(f"Health check: http://0.0.0.0:{port}/health")
+    logger.info(f"API docs: http://0.0.0.0:{port}/docs")
+    logger.info("=" * 60)
 
 if __name__ == "__main__":
     import uvicorn
     port = int(os.getenv("PORT", 8000))
-    uvicorn.run(app, host="0.0.0.0", port=port)
+    logger.info(f"Starting uvicorn on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
 

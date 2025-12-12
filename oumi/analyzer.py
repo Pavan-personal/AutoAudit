@@ -44,7 +44,8 @@ try:
     OUMI_AVAILABLE = True
 except ImportError as e:
     OUMI_AVAILABLE = False
-    raise ImportError(f"Oumi not installed: {e}")
+    import logging
+    logging.warning(f"Oumi not available: {e}. API endpoints will fail.")
 
 class OumiAnalyzer:
     def __init__(self, model_name: str = "gpt-4o-mini"):
@@ -57,6 +58,8 @@ class OumiAnalyzer:
         self._initialize_tree_sitter()
     
     def _initialize_engine(self):
+        if not OUMI_AVAILABLE:
+            raise RuntimeError("Oumi is not available. Please install oumi package and set OPENAI_API_KEY.")
         model_params = ModelParams(model_name=self.model_name)
         generation_params = GenerationParams(
             max_new_tokens=3000,
