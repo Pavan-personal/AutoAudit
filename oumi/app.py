@@ -32,15 +32,27 @@ logger.info(f"Python: {sys.version}")
 logger.info(f"Working directory: {os.getcwd()}")
 logger.info(f"OPENAI_API_KEY present: {'✅ YES' if os.getenv('OPENAI_API_KEY') else '❌ NO - REQUIRED!'}")
 
-try:
-    from analyzer import OumiAnalyzer
-    logger.info("✅ OumiAnalyzer imported successfully")
-    ANALYZER_AVAILABLE = True
-except Exception as e:
-    logger.error(f"❌ Failed to import OumiAnalyzer: {e}")
-    logger.error("This will cause API endpoints to fail!")
-    ANALYZER_AVAILABLE = False
-    OumiAnalyzer = None
+ANALYZER_AVAILABLE = False
+OumiAnalyzer = None
+
+def import_analyzer():
+    global ANALYZER_AVAILABLE, OumiAnalyzer
+    try:
+        logger.info("⏳ Importing OumiAnalyzer (this may take 30-60 seconds)...")
+        from analyzer import OumiAnalyzer as _OumiAnalyzer
+        OumiAnalyzer = _OumiAnalyzer
+        ANALYZER_AVAILABLE = True
+        logger.info("✅ OumiAnalyzer imported successfully")
+        return True
+    except Exception as e:
+        import traceback
+        logger.error(f"❌ Failed to import OumiAnalyzer: {e}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        ANALYZER_AVAILABLE = False
+        OumiAnalyzer = None
+        return False
+
+import_analyzer()
 
 app = FastAPI(title="Oumi Code Analysis API", version="1.0.0")
 logger.info("✅ FastAPI app created")
@@ -126,6 +138,9 @@ async def startup_event():
     logger.info(f"🎉 Server starting on port {port}")
     logger.info(f"Health check: http://0.0.0.0:{port}/health")
     logger.info(f"API docs: http://0.0.0.0:{port}/docs")
+    if not ANALYZER_AVAILABLE:
+        logger.warning("⚠️  OumiAnalyzer not available - /api/analyze will fail")
+        logger.warning("⚠️  Consider upgrading to Starter tier (2GB RAM) for ML workloads")
     logger.info("=" * 60)
 
 if __name__ == "__main__":
