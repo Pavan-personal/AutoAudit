@@ -133,19 +133,19 @@ async def analyze_code(request: AnalysisRequest):
 
 @app.on_event("startup")
 async def startup_event():
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 7860))
     logger.info("=" * 60)
     logger.info(f"🎉 Server starting on port {port}")
     logger.info(f"Health check: http://0.0.0.0:{port}/health")
     logger.info(f"API docs: http://0.0.0.0:{port}/docs")
     if not ANALYZER_AVAILABLE:
         logger.warning("⚠️  OumiAnalyzer not available - /api/analyze will fail")
-        logger.warning("⚠️  Consider upgrading to Starter tier (2GB RAM) for ML workloads")
+        logger.warning("⚠️  Check OPENAI_API_KEY is set in environment variables")
     logger.info("=" * 60)
 
 if __name__ == "__main__":
     import uvicorn
-    port = int(os.getenv("PORT", 8000))
+    port = int(os.getenv("PORT", 7860))
     logger.info(f"Starting uvicorn on port {port}")
     uvicorn.run(app, host="0.0.0.0", port=port, log_level="info")
 
