@@ -34,6 +34,7 @@ logger.info(f"OPENAI_API_KEY present: {'✅ YES' if os.getenv('OPENAI_API_KEY') 
 
 ANALYZER_AVAILABLE = False
 OumiAnalyzer = None
+analyzer_instance = None
 
 def import_analyzer():
     global ANALYZER_AVAILABLE, OumiAnalyzer
@@ -51,6 +52,20 @@ def import_analyzer():
         ANALYZER_AVAILABLE = False
         OumiAnalyzer = None
         return False
+
+def get_analyzer():
+    global analyzer_instance
+    if analyzer_instance is None and ANALYZER_AVAILABLE:
+        try:
+            logger.info("Initializing OumiAnalyzer instance...")
+            analyzer_instance = OumiAnalyzer()
+            logger.info("✅ OumiAnalyzer instance created")
+        except Exception as e:
+            import traceback
+            logger.error(f"❌ Failed to create OumiAnalyzer instance: {e}")
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            return None
+    return analyzer_instance
 
 import_analyzer()
 
@@ -104,7 +119,12 @@ async def analyze_code(request: AnalysisRequest):
             raise HTTPException(status_code=400, detail="No files provided")
         
         logger.info(f"Analyzing {len(request.files)} file(s)")
-        analyzer = OumiAnalyzer()
+        analyzer = get_analyzer()
+        if analyzer is None:
+            raise HTTPException(
+                status_code=503,
+                detail="OumiAnalyzer instance could not be created. Check server logs."
+            )
         files_data = [{"path": f.path, "content": f.content} for f in request.files]
         analysis_types = request.options.type if request.options and request.options.type else ["bugs"]
         if isinstance(analysis_types, str):
@@ -141,6 +161,9 @@ async def startup_event():
     if not ANALYZER_AVAILABLE:
         logger.warning("⚠️  OumiAnalyzer not available - /api/analyze will fail")
         logger.warning("⚠️  Check OPENAI_API_KEY is set in environment variables")
+    else:
+        logger.info("⏳ Pre-initializing analyzer instance...")
+        get_analyzer()
     logger.info("=" * 60)
 
 if __name__ == "__main__":
