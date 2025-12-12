@@ -7,6 +7,8 @@ Returns GitHub issue-formatted results
 import os
 import sys
 import logging
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -35,6 +37,7 @@ logger.info(f"OPENAI_API_KEY present: {'✅ YES' if os.getenv('OPENAI_API_KEY') 
 ANALYZER_AVAILABLE = False
 OumiAnalyzer = None
 analyzer_instance = None
+executor = ThreadPoolExecutor(max_workers=4)
 
 def import_analyzer():
     global ANALYZER_AVAILABLE, OumiAnalyzer
@@ -130,10 +133,14 @@ async def analyze_code(request: AnalysisRequest):
         if isinstance(analysis_types, str):
             analysis_types = [analysis_types]
         user_prompt = request.options.userPrompt if request.options and request.options.userPrompt else None
-        results = analyzer.analyze_files(
-            files=files_data,
-            analysis_types=analysis_types,
-            user_prompt=user_prompt
+        
+        loop = asyncio.get_event_loop()
+        results = await loop.run_in_executor(
+            executor,
+            analyzer.analyze_files,
+            files_data,
+            analysis_types,
+            user_prompt
         )
         
         logger.info(f"Analysis complete: {sum(len(r.get('issues', [])) for r in results)} issues found")
@@ -158,6 +165,7 @@ async def startup_event():
     logger.info(f"🎉 Server starting on port {port}")
     logger.info(f"Health check: http://0.0.0.0:{port}/health")
     logger.info(f"API docs: http://0.0.0.0:{port}/docs")
+    logger.info(f"Concurrent requests: Enabled (max {executor._max_workers} workers)")
     if not ANALYZER_AVAILABLE:
         logger.warning("⚠️  OumiAnalyzer not available - /api/analyze will fail")
         logger.warning("⚠️  Check OPENAI_API_KEY is set in environment variables")
@@ -165,6 +173,11 @@ async def startup_event():
         logger.info("⏳ Pre-initializing analyzer instance...")
         get_analyzer()
     logger.info("=" * 60)
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("Shutting down thread pool executor...")
+    executor.shutdown(wait=True)
 
 if __name__ == "__main__":
     import uvicorn
