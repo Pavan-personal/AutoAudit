@@ -189,10 +189,14 @@ async function executeCline(prompt: string, workingDir?: string, timeout: number
 
     let clineCommand: string;
     const clinePath = path.join(process.cwd(), "node_modules", ".bin", "cline");
+    const clinePathAlt = path.join(__dirname, "..", "..", "node_modules", ".bin", "cline");
     
     if (fs.existsSync(clinePath)) {
       clineCommand = `cat "${promptFile}" | "${clinePath}" 2>&1`;
-      console.log("Using locally installed Cline");
+      console.log("Using locally installed Cline from process.cwd()");
+    } else if (fs.existsSync(clinePathAlt)) {
+      clineCommand = `cat "${promptFile}" | "${clinePathAlt}" 2>&1`;
+      console.log("Using locally installed Cline from __dirname");
     } else {
       clineCommand = `cat "${promptFile}" | npx --yes --prefer-offline --no-audit --no-fund --no-install cline 2>&1`;
       console.log("Falling back to npx (Cline not found locally)");
