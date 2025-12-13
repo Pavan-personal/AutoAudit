@@ -1534,8 +1534,7 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
       const promptFile = path.join(tempDir, "cline-prompt.txt");
       fs.writeFileSync(promptFile, prompt, "utf8");
       
-      const escapedPromptFile = promptFile.replace(/'/g, "'\\''");
-      const clineCommand = `npx -y cline "$(cat '${escapedPromptFile}')"`;
+      const clineCommand = `cat "${promptFile}" | npx -y cline`;
       
       console.log("Executing Cline analysis...");
       const { stdout, stderr } = await executeCline(clineCommand, tempDir, 600000);
@@ -1751,8 +1750,7 @@ Format your response clearly with the score prominently displayed.`;
       const promptFile = path.join(tempDir, "cline-pr-prompt.txt");
       fs.writeFileSync(promptFile, analysisPrompt, "utf8");
       
-      const escapedPromptFile = promptFile.replace(/'/g, "'\\''");
-      const clineCommand = `npx -y cline "$(cat '${escapedPromptFile}')"`;
+      const clineCommand = `cat "${promptFile}" | npx -y cline`;
       
       console.log(`Executing Cline PR analysis for PR #${prNumber}...`);
       const { stdout, stderr } = await executeCline(clineCommand, tempDir, 300000);
