@@ -238,6 +238,28 @@ function parseClineIssuesOutput(output: string, files: Array<{ path: string; con
     }>;
   }>;
 } {
+  if (!output || output.trim().length === 0) {
+    throw new Error("Cline returned empty output - analysis may have failed");
+  }
+
+  const lowerOutput = output.toLowerCase();
+  
+  if (lowerOutput.includes("npm error") || 
+      lowerOutput.includes("enoent") || 
+      lowerOutput.includes("errno") ||
+      lowerOutput.includes("syscall") ||
+      lowerOutput.includes("invalid response body") ||
+      lowerOutput.includes("no such file or directory")) {
+    throw new Error(`Cline execution failed with npm error. Please check Cline installation and disk space.`);
+  }
+
+  if (lowerOutput.includes("error") && (lowerOutput.includes("failed") || lowerOutput.includes("cannot") || lowerOutput.includes("unable"))) {
+    const errorMatch = output.match(/(?:error|failed|cannot|unable)[:\s]+([^\n]+)/i);
+    if (errorMatch && !lowerOutput.includes("issue") && !lowerOutput.includes("bug")) {
+      throw new Error(`Cline execution failed: ${errorMatch[1].substring(0, 150)}`);
+    }
+  }
+
   const results: Array<{
     file: string;
     status: string;
@@ -249,7 +271,6 @@ function parseClineIssuesOutput(output: string, files: Array<{ path: string; con
   }> = [];
 
   let totalIssues = 0;
-  const lowerOutput = output.toLowerCase();
 
   for (const file of files) {
     const fileIssues: Array<{
@@ -411,11 +432,39 @@ function extractTags(text: string): string[] {
 }
 
 function parseClinePRScore(output: string): { score: number; reasoning: string; recommendations: string[] } {
+  const lowerOutput = output.toLowerCase();
+  
+  if (!output || output.trim().length === 0) {
+    throw new Error("Cline returned empty output");
+  }
+
+  if (lowerOutput.includes("npm error") || 
+      lowerOutput.includes("enoent") || 
+      lowerOutput.includes("errno") ||
+      lowerOutput.includes("syscall") ||
+      lowerOutput.includes("invalid response body") ||
+      lowerOutput.includes("no such file or directory")) {
+    throw new Error(`Cline execution failed with npm error: ${output.substring(0, 200)}`);
+  }
+
+  if (lowerOutput.includes("error") && (lowerOutput.includes("failed") || lowerOutput.includes("cannot"))) {
+    const errorMatch = output.match(/error[:\s]+([^\n]+)/i);
+    if (errorMatch) {
+      throw new Error(`Cline execution failed: ${errorMatch[1]}`);
+    }
+  }
+
   let score = 50;
   const reasoning: string[] = [];
   const recommendations: string[] = [];
 
-  const lowerOutput = output.toLowerCase();
+  const scoreMatch = output.match(/(?:score|rating|readiness)[:\s]*(\d{1,3})(?:\s*\/\s*100)?/i);
+  if (scoreMatch) {
+    const parsedScore = parseInt(scoreMatch[1], 10);
+    if (!isNaN(parsedScore) && parsedScore >= 0 && parsedScore <= 100) {
+      score = parsedScore;
+    }
+  }
 
   if (lowerOutput.includes("excellent") || lowerOutput.includes("great") || lowerOutput.includes("perfect")) {
     score = Math.min(95, score + 30);
@@ -453,8 +502,24 @@ function parseClinePRScore(output: string): { score: number; reasoning: string; 
     recommendations.push("Resolve merge conflicts before merging");
   }
 
+  const reasoningMatch = output.match(/(?:reasoning|analysis|assessment)[:\s]*([^\n]+(?:\n[^\n]+){0,5})/i);
+  if (reasoningMatch && reasoningMatch[1].length > 20) {
+    reasoning.push(reasoningMatch[1].trim());
+  }
+
   if (reasoning.length === 0) {
-    reasoning.push("Code analysis completed");
+    const firstParagraph = output.split("\n\n")[0] || output.split("\n").slice(0, 3).join(" ");
+    if (firstParagraph.length > 20 && !firstParagraph.toLowerCase().includes("error")) {
+      reasoning.push(firstParagraph.substring(0, 200));
+    } else {
+      reasoning.push("Code analysis completed");
+    }
+  }
+
+  const recommendationsMatch = output.match(/(?:recommendations?|suggestions?|improvements?)[:\s]*([^\n]+(?:\n[^\n-]+){0,10})/i);
+  if (recommendationsMatch) {
+    const recs = recommendationsMatch[1].split(/\n|•|-/).filter(r => r.trim().length > 10);
+    recommendations.push(...recs.slice(0, 5).map(r => r.trim()));
   }
 
   return {
