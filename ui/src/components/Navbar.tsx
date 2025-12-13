@@ -1,10 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Menu, X, Github, ArrowRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import logo from '@/assets/logo.png';
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const navigate = useNavigate();
+  
+  const BACKEND_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
+
+  function handleGetStarted() {
+    window.location.href = `${BACKEND_URL}/auth/github`;
+  }
 
   useEffect(() => {
     const handleScroll = () => {
@@ -64,7 +72,10 @@ const Navbar = () => {
               <Github className="w-4 h-4" />
               GitHub
             </a>
-            <button className="btn-primary text-sm py-3 px-6">
+            <button 
+              onClick={handleGetStarted}
+              className="btn-primary text-sm py-3 px-6"
+            >
               Get Started
               <ArrowRight className="w-4 h-4" />
             </button>
@@ -103,7 +114,10 @@ const Navbar = () => {
                   <Github className="w-4 h-4" />
                   View on GitHub
                 </a>
-                <button className="btn-primary justify-center">
+                <button 
+                  onClick={handleGetStarted}
+                  className="btn-primary justify-center"
+                >
                   Get Started
                   <ArrowRight className="w-4 h-4" />
                 </button>

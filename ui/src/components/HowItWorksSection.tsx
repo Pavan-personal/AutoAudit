@@ -77,7 +77,7 @@ const HowItWorksSection = () => {
       );
 
       // Timeline phases
-      gsap.utils.toArray('.workflow-phase').forEach((phase: any, i) => {
+      gsap.utils.toArray('.workflow-phase').forEach((phase: Element, i) => {
         gsap.fromTo(
           phase,
           { opacity: 0, x: i % 2 === 0 ? -50 : 50 },

@@ -4,58 +4,27 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model User {
-  id        String        @id @default(uuid())
-  googleId  String        @unique
-  email     String        @unique
-  name      String
-  image     String
-  createdAt DateTime      @default(now())
-  walletAddress String?
-  created   Json[]        // For storing DS2 (quiz metadata)
+  id          String    @id @default(uuid())
+  githubId    String?   @unique
+  email       String    @unique
+  name        String
+  image       String?
+  githubToken String?
+  createdAt   DateTime  @default(now())
+  
+  @@index([githubId])
+  @@index([email])
 }
 
-model Quiz {
-  id                    String   @id @default(uuid())
-  randomUID            String   @unique
-  walletAddress        String
-  encryptedData        String   // Encrypted DS1
-  questions            String   // JSON string of actual questions (fallback) - NO ANSWERS
-  questionSets         String   // JSON string of A-G question sets with indices
-  requestId            String?  // Blocklock request ID for decryption
-  blocklockCiphertext  String   // Blocklock ciphertext
-  blocklockCondition   String   // Blocklock condition bytes
-  targetBlock          String   // Target block for decryption
-  startTime            DateTime
-  title                String
-  createdAt            DateTime @default(now())
+model OAuthState {
+  id        String   @id @default(uuid())
+  state     String   @unique
+  createdAt DateTime @default(now())
   
-  // Relations
-  attemptedQuizzes     AttemptedQuiz[]
-  
-  @@index([randomUID])
-  @@index([walletAddress])
-}
-
-model AttemptedQuiz {
-  id              String   @id @default(uuid())
-  quizId          String   // Reference to the original quiz
-  userWalletAddress String // User who attempted the quiz
-  selectedSet     String   // Which set (A-G) was selected
-  answers         String   // JSON string of user's answers
-  score           Int      // User's score
-  totalQuestions  Int      // Total questions in the quiz
-  ipfsHash        String   // IPFS hash where attempt data is stored
-  attemptData     String   // JSON string of full attempt data (questions + answers + metadata)
-  submittedAt     DateTime @default(now())
-  
-  // Relations
-  quiz            Quiz     @relation(fields: [quizId], references: [id])
-  
-  @@index([quizId])
-  @@index([userWalletAddress])
-  @@index([ipfsHash])
+  @@index([state])
 }
 

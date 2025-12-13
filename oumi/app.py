@@ -177,7 +177,7 @@ async def startup_event():
 @app.on_event("shutdown")
 async def shutdown_event():
     logger.info("Shutting down thread pool executor...")
-    executor.shutdown(wait=True)
+    executor.shutdown(wait=False)
 
 if __name__ == "__main__":
     import uvicorn
