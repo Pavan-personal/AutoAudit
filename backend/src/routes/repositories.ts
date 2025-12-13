@@ -587,7 +587,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
               createdAt,
               updatedAt,
               aiAnalysis,
-              autoAssign,
             } = req.body;
 
             const automatedIssue = await prisma.automatedIssue.upsert({
@@ -609,7 +608,7 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
                 comments,
                 updatedAt,
                 aiAnalysis: aiAnalysis || false,
-                autoAssign: autoAssign || false,
+                autoAssign: true,
               },
               create: {
                 repositoryOwner: owner,
@@ -627,12 +626,17 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
                 createdAt,
                 updatedAt,
                 aiAnalysis: aiAnalysis || false,
-                autoAssign: autoAssign || false,
+                autoAssign: true,
                 userId: user.id,
               },
             });
 
-            res.json({ issue: automatedIssue });
+            res.json({ 
+              issue: {
+                ...automatedIssue,
+                issueId: automatedIssue.issueId.toString(),
+              }
+            });
             return;
           }
         } catch (err) {
@@ -702,7 +706,12 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
       },
     });
 
-    res.json({ issue: automatedIssue });
+    res.json({ 
+      issue: {
+        ...automatedIssue,
+        issueId: automatedIssue.issueId.toString(),
+      }
+    });
   } catch (error: unknown) {
     console.error("Error saving automated issue:", error);
     res.status(500).json({ error: "Internal server error" });

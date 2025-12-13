@@ -137,7 +137,7 @@ function IssuesList() {
           createdAt: automateDialog.issue.created_at,
           updatedAt: automateDialog.issue.updated_at,
           aiAnalysis,
-          autoAssign,
+          autoAssign: true,
         }),
       });
       
@@ -353,11 +353,11 @@ function IssuesList() {
                 className="rounded border-gray-300"
               />
               <label htmlFor="aiAnalysis" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                Analyze with AI and assign to valid user
+                Analyze with AI (auto-assignment will always be enabled)
               </label>
             </div>
             <p className="text-xs text-muted-foreground">
-              When enabled, our AI will analyze the issue content and automatically assign it to the most appropriate team member based on their expertise and workload.
+              When enabled, our AI will analyze the issue content and automatically assign it to the most appropriate team member based on their expertise and workload. Auto-assignment is always enabled when adding issues to automation.
             </p>
           </div>
           <DialogFooter>
