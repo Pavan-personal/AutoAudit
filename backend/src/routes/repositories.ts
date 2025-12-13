@@ -521,7 +521,6 @@ router.get("/:owner/:repo/automated-issues", async (req: Request, res: Response)
               },
               select: {
                 issueNumber: true,
-                aiAnalysis: true,
                 autoAssign: true,
                 assignedTo: true,
               },
@@ -545,7 +544,6 @@ router.get("/:owner/:repo/automated-issues", async (req: Request, res: Response)
       },
       select: {
         issueNumber: true,
-        aiAnalysis: true,
         autoAssign: true,
         assignedTo: true,
       },
@@ -586,7 +584,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
               comments,
               createdAt,
               updatedAt,
-              aiAnalysis,
             } = req.body;
 
             const automatedIssue = await prisma.automatedIssue.upsert({
@@ -607,7 +604,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
                 user: issueUser,
                 comments,
                 updatedAt,
-                aiAnalysis: aiAnalysis || false,
                 autoAssign: true,
               },
               create: {
@@ -625,7 +621,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
                 comments,
                 createdAt,
                 updatedAt,
-                aiAnalysis: aiAnalysis || false,
                 autoAssign: true,
                 userId: user.id,
               },
@@ -660,7 +655,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
       comments,
       createdAt,
       updatedAt,
-      aiAnalysis,
     } = req.body;
 
     const automatedIssue = await prisma.automatedIssue.upsert({
@@ -681,7 +675,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
         user: issueUser,
         comments,
         updatedAt,
-        aiAnalysis: aiAnalysis || false,
         autoAssign: true,
       },
       create: {
@@ -699,7 +692,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
         comments,
         createdAt,
         updatedAt,
-        aiAnalysis: aiAnalysis || false,
         autoAssign: true,
         userId: userId,
       },

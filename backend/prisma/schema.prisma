@@ -45,8 +45,7 @@ model AutomatedIssue {
   comments        Int      @default(0)
   createdAt       DateTime
   updatedAt       DateTime
-  aiAnalysis      Boolean  @default(false)
-  autoAssign      Boolean  @default(false)
+  autoAssign      Boolean  @default(true)
   assignedTo      String?
   userId          String
   createdAtDb     DateTime @default(now())

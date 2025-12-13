@@ -46,8 +46,6 @@ function IssuesList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [automateDialog, setAutomateDialog] = useState<{ open: boolean; issue: Issue | null }>({ open: false, issue: null });
-  const [aiAnalysis, setAiAnalysis] = useState(false);
-  const [autoAssign, setAutoAssign] = useState(false);
   const API_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
 
   useEffect(() => {
@@ -136,7 +134,6 @@ function IssuesList() {
           comments: automateDialog.issue.comments,
           createdAt: automateDialog.issue.created_at,
           updatedAt: automateDialog.issue.updated_at,
-          aiAnalysis,
           autoAssign: true,
         }),
       });
@@ -154,8 +151,6 @@ function IssuesList() {
       });
       
       setAutomateDialog({ open: false, issue: null });
-      setAiAnalysis(false);
-      setAutoAssign(false);
     } catch (error) {
       console.error("Error automating issue:", error);
       toast.error("Failed to Automate Issue", {
@@ -340,25 +335,34 @@ function IssuesList() {
           <DialogHeader>
             <DialogTitle>Automate Issue #{automateDialog.issue?.number}</DialogTitle>
             <DialogDescription>
-              Add this issue to automated tracking. AI will analyze and help assign it to the right team member.
+              Add this issue to automated tracking. AI will analyze comments and assign based on comment intent.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="aiAnalysis"
-                checked={aiAnalysis}
-                onChange={(e) => setAiAnalysis(e.target.checked)}
-                className="rounded border-gray-300"
-              />
-              <label htmlFor="aiAnalysis" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                Analyze with AI (auto-assignment will always be enabled)
-              </label>
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 pt-0.5">
+                <input
+                  type="checkbox"
+                  id="autoAssign"
+                  checked={true}
+                  disabled
+                  className="w-6 h-6 rounded border-2 border-primary bg-primary text-primary-foreground focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-not-allowed"
+                  style={{ 
+                    accentColor: 'hsl(var(--primary))',
+                    backgroundColor: 'hsl(var(--primary))',
+                    borderColor: 'hsl(var(--primary))'
+                  }}
+                />
+              </div>
+              <div className="flex-1">
+                <label htmlFor="autoAssign" className="text-sm font-medium leading-none cursor-not-allowed">
+                  AI-Powered Auto-Assignment Enabled
+                </label>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Our AI will analyze all comments on this issue. If a comment indicates assignment intent (e.g., "I'll take this", "assign to me"), the issue will be automatically assigned. Normal comments without assignment intent will be ignored.
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              When enabled, our AI will analyze the issue content and automatically assign it to the most appropriate team member based on their expertise and workload. Auto-assignment is always enabled when adding issues to automation.
-            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAutomateDialog({ open: false, issue: null })}>
