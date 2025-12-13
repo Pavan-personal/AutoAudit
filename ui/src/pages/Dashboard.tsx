@@ -189,11 +189,12 @@ function Dashboard() {
                   Your GitHub token is securely stored and ready to use for API calls.
                 </p>
                 <div className="flex gap-2">
-                  <Button variant="outline" size="sm">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => navigate("/repositories")}
+                  >
                     View Repositories
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    View Profile
                   </Button>
                 </div>
               </div>

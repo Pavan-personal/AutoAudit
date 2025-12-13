@@ -3,6 +3,10 @@ import cookieParser from "cookie-parser";
 import cors from "cors";
 import dotenv from "dotenv";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { Pool } from "pg";
+
+const PgSession = connectPgSimple(session);
 
 dotenv.config();
 
@@ -64,12 +68,21 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+});
+
 app.use(
   session({
+    store: new PgSession({
+      pool: pool,
+      tableName: "session",
+      createTableIfMissing: true,
+    }),
     name: "sessionId",
     secret: process.env.SESSION_SECRET || "your-secret-key-change-in-production",
-    resave: true,
-    saveUninitialized: true,
+    resave: false,
+    saveUninitialized: false,
     cookie: {
       secure: true,
       httpOnly: true,
@@ -105,9 +118,11 @@ app.get("/api/status", (_req: express.Request, res: express.Response) => {
 
 import authRoutes from "./routes/auth";
 import webhookRoutes from "./routes/webhook";
+import repositoriesRoutes from "./routes/repositories";
 
 app.use("/auth", authRoutes);
 app.use("/webhook", webhookRoutes);
+app.use("/api/repositories", repositoriesRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);

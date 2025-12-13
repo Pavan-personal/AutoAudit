@@ -39,10 +39,13 @@ router.post("/github", express.raw({ type: "application/json" }), (req: Request,
   
   let webhookPayload: any;
   try {
-    webhookPayload = JSON.parse(rawBody.toString());
+    const bodyString = Buffer.isBuffer(rawBody) ? rawBody.toString("utf8") : String(rawBody);
+    webhookPayload = JSON.parse(bodyString);
     req.body = webhookPayload;
   } catch (error) {
     console.error("[WEBHOOK /github] Failed to parse JSON body:", error);
+    console.error("[WEBHOOK /github] Raw body type:", typeof rawBody);
+    console.error("[WEBHOOK /github] Raw body preview:", rawBody?.toString?.()?.substring(0, 200));
     res.status(400).json({ error: "Invalid JSON" });
     return;
   }
