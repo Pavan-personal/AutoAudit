@@ -661,7 +661,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
       createdAt,
       updatedAt,
       aiAnalysis,
-      autoAssign,
     } = req.body;
 
     const automatedIssue = await prisma.automatedIssue.upsert({
@@ -683,13 +682,13 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
         comments,
         updatedAt,
         aiAnalysis: aiAnalysis || false,
-        autoAssign: autoAssign || false,
+        autoAssign: true,
       },
       create: {
         repositoryOwner: owner,
         repositoryName: repo,
         issueNumber,
-        issueId: BigInt(issueId),
+        issueId: typeof issueId === 'bigint' ? issueId : BigInt(issueId),
         title,
         body,
         state,
@@ -701,7 +700,7 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
         createdAt,
         updatedAt,
         aiAnalysis: aiAnalysis || false,
-        autoAssign: autoAssign || false,
+        autoAssign: true,
         userId: userId,
       },
     });
