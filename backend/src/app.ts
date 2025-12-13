@@ -10,6 +10,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 const CLIENT_URL = process.env.CLIENT_URL || process.env.FRONTEND_URL;
 
+app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cookieParser());
 

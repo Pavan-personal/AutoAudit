@@ -1,9 +1,11 @@
 import express, { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
+import jwt from "jsonwebtoken";
 
 const router = express.Router();
 const prisma = new PrismaClient();
+const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "your-jwt-secret-change-in-production";
 
 declare module "express-session" {
   interface SessionData {
@@ -186,10 +188,17 @@ router.get("/github/callback", async (req: Request, res: Response) => {
       });
     }
 
-    console.log("User created/updated, setting session");
+    console.log("User created/updated, generating JWT token");
     console.log("User ID:", user.id);
     console.log("User email:", user.email);
-    console.log("Session ID before save:", req.sessionID);
+    
+    const token = jwt.sign(
+      { userId: user.id, email: user.email },
+      JWT_SECRET,
+      { expiresIn: "30d" }
+    );
+    
+    console.log("JWT token generated, length:", token.length);
     
     if (req.session) {
       req.session.userId = user.id;
@@ -202,14 +211,11 @@ router.get("/github/callback", async (req: Request, res: Response) => {
             reject(err);
           } else {
             console.log("Session saved successfully");
-            console.log("Session ID after save:", req.sessionID);
-            console.log("Session cookie will be set");
+            console.log("Session ID:", req.sessionID);
             resolve();
           }
         });
       });
-    } else {
-      console.error("ERROR: No session object available!");
     }
     
     await prisma.oAuthState.delete({
@@ -222,8 +228,18 @@ router.get("/github/callback", async (req: Request, res: Response) => {
     console.log("=== REDIRECT INFO ===");
     console.log("Frontend URL:", FRONTEND_URL);
     console.log("Redirect URL:", redirectUrl);
-    console.log("Session ID:", req.sessionID);
-    console.log("Cookies being sent:", res.getHeader("Set-Cookie"));
+    console.log("Setting JWT token in httpOnly cookie");
+    
+    res.cookie("authToken", token, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+      path: "/",
+    });
+    
+    const setCookieHeader = res.getHeader("Set-Cookie");
+    console.log("Cookie header set:", setCookieHeader ? "YES" : "NO");
     console.log("====================");
     
     res.redirect(302, redirectUrl);
@@ -254,10 +270,29 @@ router.get("/me", async (req: Request, res: Response) => {
     console.log("Origin:", req.headers.origin || "none");
     console.log("Referer:", req.headers.referer || "none");
     
-    const userId = req.session?.userId;
+    let userId: string | undefined = req.session?.userId;
+    
+    if (!userId) {
+      const authToken = req.cookies?.authToken;
+      if (authToken) {
+        console.log("Found authToken in cookies, verifying JWT...");
+        try {
+          const decoded = jwt.verify(authToken, JWT_SECRET) as { userId: string; email: string };
+          userId = decoded.userId;
+          console.log("JWT token validated, userId:", userId);
+          
+          if (req.session) {
+            req.session.userId = userId;
+            req.session.save(() => {});
+          }
+        } catch (err) {
+          console.error("JWT verification failed:", err);
+        }
+      }
+    }
 
     if (!userId) {
-      console.log("No userId in session - returning 401");
+      console.log("No userId found - returning 401");
       console.log("Full session object:", JSON.stringify(req.session || {}, null, 2));
       res.status(401).json({ error: "Not authenticated" });
       return;

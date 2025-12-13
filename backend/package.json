@@ -6,6 +6,7 @@
     "@types/passport-github2": "^1.2.9",
     "axios": "^1.7.9",
     "bcryptjs": "^3.0.2",
+    "connect-pg-simple": "^10.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
@@ -17,9 +18,9 @@
     "passport-github2": "^0.1.12",
     "pg": "^8.14.1",
     "pre-commit": "^1.2.2",
+    "prisma": "^6.5.0",
     "rimraf": "^6.0.1",
-    "uuid": "^11.1.0",
-    "prisma": "^6.5.0"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
