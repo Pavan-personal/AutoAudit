@@ -179,20 +179,30 @@ function Repositories() {
                         {new Date(repo.updated_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2">
                       <Button
                         onClick={() => handleAudit(repo)}
                         variant="outline"
-                        className="flex-1"
+                        className="w-full"
                       >
                         Audit
                       </Button>
-                      <Button
-                        onClick={() => navigate(`/repositories/${repo.full_name}/issues-list`)}
-                        className="flex-1"
-                      >
-                        Automate
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => navigate(`/repositories/${repo.full_name}/issues-list`)}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          Issues
+                        </Button>
+                        <Button
+                          onClick={() => navigate(`/repositories/${repo.full_name}/prs-list`)}
+                          variant="outline"
+                          className="flex-1"
+                        >
+                          PRs
+                        </Button>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

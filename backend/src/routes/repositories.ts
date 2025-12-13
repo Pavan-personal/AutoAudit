@@ -498,4 +498,564 @@ router.post("/:owner/:repo/issues", async (req: Request, res: Response) => {
   }
 });
 
+router.get("/:owner/:repo/automated-issues", async (req: Request, res: Response) => {
+  try {
+    const { owner, repo } = req.params;
+    const userId = req.session?.userId;
+    
+    if (!userId) {
+      const authToken = req.cookies?.authToken;
+      if (authToken) {
+        try {
+          const decoded = jwt.verify(authToken, JWT_SECRET) as { userId: string };
+          const user = await prisma.user.findUnique({
+            where: { id: decoded.userId },
+            select: { id: true },
+          });
+          if (user) {
+            const issues = await prisma.automatedIssue.findMany({
+              where: {
+                repositoryOwner: owner,
+                repositoryName: repo,
+                userId: user.id,
+              },
+              select: {
+                issueNumber: true,
+                aiAnalysis: true,
+                autoAssign: true,
+                assignedTo: true,
+              },
+            });
+            res.json({ issues });
+            return;
+          }
+        } catch (err) {
+          console.error("JWT verification failed:", err);
+        }
+      }
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const issues = await prisma.automatedIssue.findMany({
+      where: {
+        repositoryOwner: owner,
+        repositoryName: repo,
+        userId: userId,
+      },
+      select: {
+        issueNumber: true,
+        aiAnalysis: true,
+        autoAssign: true,
+        assignedTo: true,
+      },
+    });
+
+    res.json({ issues });
+  } catch (error: unknown) {
+    console.error("Error fetching automated issues:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response) => {
+  try {
+    const { owner, repo } = req.params;
+    const userId = req.session?.userId;
+    
+    if (!userId) {
+      const authToken = req.cookies?.authToken;
+      if (authToken) {
+        try {
+          const decoded = jwt.verify(authToken, JWT_SECRET) as { userId: string };
+          const user = await prisma.user.findUnique({
+            where: { id: decoded.userId },
+            select: { id: true },
+          });
+          if (user) {
+            const {
+              issueNumber,
+              issueId,
+              title,
+              body,
+              state,
+              htmlUrl,
+              assignees,
+              labels,
+              user: issueUser,
+              comments,
+              createdAt,
+              updatedAt,
+              aiAnalysis,
+              autoAssign,
+            } = req.body;
+
+            const automatedIssue = await prisma.automatedIssue.upsert({
+              where: {
+                repositoryOwner_repositoryName_issueNumber: {
+                  repositoryOwner: owner,
+                  repositoryName: repo,
+                  issueNumber: issueNumber,
+                },
+              },
+              update: {
+                title,
+                body,
+                state,
+                htmlUrl,
+                assignees,
+                labels,
+                user: issueUser,
+                comments,
+                updatedAt,
+                aiAnalysis: aiAnalysis || false,
+                autoAssign: autoAssign || false,
+              },
+              create: {
+                repositoryOwner: owner,
+                repositoryName: repo,
+                issueNumber,
+                issueId,
+                title,
+                body,
+                state,
+                htmlUrl,
+                assignees,
+                labels,
+                user: issueUser,
+                comments,
+                createdAt,
+                updatedAt,
+                aiAnalysis: aiAnalysis || false,
+                autoAssign: autoAssign || false,
+                userId: user.id,
+              },
+            });
+
+            res.json({ issue: automatedIssue });
+            return;
+          }
+        } catch (err) {
+          console.error("JWT verification failed:", err);
+        }
+      }
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const {
+      issueNumber,
+      issueId,
+      title,
+      body,
+      state,
+      htmlUrl,
+      assignees,
+      labels,
+      user: issueUser,
+      comments,
+      createdAt,
+      updatedAt,
+      aiAnalysis,
+      autoAssign,
+    } = req.body;
+
+    const automatedIssue = await prisma.automatedIssue.upsert({
+      where: {
+        repositoryOwner_repositoryName_issueNumber: {
+          repositoryOwner: owner,
+          repositoryName: repo,
+          issueNumber: issueNumber,
+        },
+      },
+      update: {
+        title,
+        body,
+        state,
+        htmlUrl,
+        assignees,
+        labels,
+        user: issueUser,
+        comments,
+        updatedAt,
+        aiAnalysis: aiAnalysis || false,
+        autoAssign: autoAssign || false,
+      },
+      create: {
+        repositoryOwner: owner,
+        repositoryName: repo,
+        issueNumber,
+        issueId,
+        title,
+        body,
+        state,
+        htmlUrl,
+        assignees,
+        labels,
+        user: issueUser,
+        comments,
+        createdAt,
+        updatedAt,
+        aiAnalysis: aiAnalysis || false,
+        autoAssign: autoAssign || false,
+        userId: userId,
+      },
+    });
+
+    res.json({ issue: automatedIssue });
+  } catch (error: unknown) {
+    console.error("Error saving automated issue:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/:owner/:repo/pull-requests", async (req: Request, res: Response) => {
+  try {
+    const { owner, repo } = req.params;
+    const token = await getGitHubToken(req);
+    
+    if (!token) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const isUserAccessToken = token.startsWith("ghu_");
+    const authHeader = isUserAccessToken ? `Bearer ${token}` : `token ${token}`;
+
+    let authHeaderForRequest: string;
+
+    if (GITHUB_APP_ID && GITHUB_PRIVATE_KEY) {
+      const installationId = await getInstallationId(owner, repo);
+      if (installationId) {
+        const installationToken = await generateInstallationToken(installationId);
+        if (installationToken) {
+          authHeaderForRequest = `Bearer ${installationToken}`;
+        } else {
+          authHeaderForRequest = authHeader;
+        }
+      } else {
+        authHeaderForRequest = authHeader;
+      }
+    } else {
+      authHeaderForRequest = authHeader;
+    }
+
+    const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}/pulls`, {
+      headers: {
+        Authorization: authHeaderForRequest,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      params: {
+        state: "open",
+        per_page: 100,
+        sort: "updated",
+        direction: "desc",
+      },
+    });
+
+    res.json({ pullRequests: response.data });
+  } catch (error: unknown) {
+    console.error("Error fetching pull requests:", error);
+    if (axios.isAxiosError(error)) {
+      res.status(error.response?.status || 500).json({
+        error: error.response?.data?.message || "Failed to fetch pull requests",
+      });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+});
+
+router.get("/:owner/:repo/automated-prs", async (req: Request, res: Response) => {
+  try {
+    const { owner, repo } = req.params;
+    const userId = req.session?.userId;
+    
+    if (!userId) {
+      const authToken = req.cookies?.authToken;
+      if (authToken) {
+        try {
+          const decoded = jwt.verify(authToken, JWT_SECRET) as { userId: string };
+          const user = await prisma.user.findUnique({
+            where: { id: decoded.userId },
+            select: { id: true },
+          });
+          if (user) {
+            const prs = await prisma.automatedPR.findMany({
+              where: {
+                repositoryOwner: owner,
+                repositoryName: repo,
+                userId: user.id,
+              },
+              select: {
+                prNumber: true,
+                aiAnalysis: true,
+                autoMerge: true,
+                merged: true,
+              },
+            });
+            res.json({ pullRequests: prs });
+            return;
+          }
+        } catch (err) {
+          console.error("JWT verification failed:", err);
+        }
+      }
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const prs = await prisma.automatedPR.findMany({
+      where: {
+        repositoryOwner: owner,
+        repositoryName: repo,
+        userId: userId,
+      },
+      select: {
+        prNumber: true,
+        aiAnalysis: true,
+        autoMerge: true,
+        merged: true,
+      },
+    });
+
+    res.json({ pullRequests: prs });
+  } catch (error: unknown) {
+    console.error("Error fetching automated PRs:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/:owner/:repo/automated-prs", async (req: Request, res: Response) => {
+  try {
+    const { owner, repo } = req.params;
+    const userId = req.session?.userId;
+    
+    if (!userId) {
+      const authToken = req.cookies?.authToken;
+      if (authToken) {
+        try {
+          const decoded = jwt.verify(authToken, JWT_SECRET) as { userId: string };
+          const user = await prisma.user.findUnique({
+            where: { id: decoded.userId },
+            select: { id: true },
+          });
+          if (user) {
+            const {
+              prNumber,
+              prId,
+              title,
+              body,
+              state,
+              htmlUrl,
+              head,
+              base,
+              user: prUser,
+              labels,
+              comments,
+              reviewComments,
+              commits,
+              additions,
+              deletions,
+              changedFiles,
+              createdAt,
+              updatedAt,
+              mergedAt,
+              aiAnalysis,
+              autoMerge,
+            } = req.body;
+
+            const automatedPR = await prisma.automatedPR.upsert({
+              where: {
+                repositoryOwner_repositoryName_prNumber: {
+                  repositoryOwner: owner,
+                  repositoryName: repo,
+                  prNumber: prNumber,
+                },
+              },
+              update: {
+                title,
+                body,
+                state,
+                htmlUrl,
+                head,
+                base,
+                user: prUser,
+                labels,
+                comments,
+                reviewComments,
+                commits,
+                additions,
+                deletions,
+                changedFiles,
+                updatedAt,
+                mergedAt,
+                aiAnalysis: aiAnalysis || false,
+                autoMerge: autoMerge || false,
+                merged: mergedAt ? true : false,
+              },
+              create: {
+                repositoryOwner: owner,
+                repositoryName: repo,
+                prNumber,
+                prId,
+                title,
+                body,
+                state,
+                htmlUrl,
+                head,
+                base,
+                user: prUser,
+                labels,
+                comments,
+                reviewComments,
+                commits,
+                additions,
+                deletions,
+                changedFiles,
+                createdAt,
+                updatedAt,
+                mergedAt,
+                aiAnalysis: aiAnalysis || false,
+                autoMerge: autoMerge || false,
+                merged: mergedAt ? true : false,
+                userId: user.id,
+              },
+            });
+
+            res.json({ pullRequest: automatedPR });
+            return;
+          }
+        } catch (err) {
+          console.error("JWT verification failed:", err);
+        }
+      }
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const {
+      prNumber,
+      prId,
+      title,
+      body,
+      state,
+      htmlUrl,
+      head,
+      base,
+      user: prUser,
+      labels,
+      comments,
+      reviewComments,
+      commits,
+      additions,
+      deletions,
+      changedFiles,
+      createdAt,
+      updatedAt,
+      mergedAt,
+      aiAnalysis,
+      autoMerge,
+    } = req.body;
+
+    const automatedPR = await prisma.automatedPR.upsert({
+      where: {
+        repositoryOwner_repositoryName_prNumber: {
+          repositoryOwner: owner,
+          repositoryName: repo,
+          prNumber: prNumber,
+        },
+      },
+      update: {
+        title,
+        body,
+        state,
+        htmlUrl,
+        head,
+        base,
+        user: prUser,
+        labels,
+        comments,
+        reviewComments,
+        commits,
+        additions,
+        deletions,
+        changedFiles,
+        updatedAt,
+        mergedAt,
+        aiAnalysis: aiAnalysis || false,
+        autoMerge: autoMerge || false,
+        merged: mergedAt ? true : false,
+      },
+      create: {
+        repositoryOwner: owner,
+        repositoryName: repo,
+        prNumber,
+        prId,
+        title,
+        body,
+        state,
+        htmlUrl,
+        head,
+        base,
+        user: prUser,
+        labels,
+        comments,
+        reviewComments,
+        commits,
+        additions,
+        deletions,
+        changedFiles,
+        createdAt,
+        updatedAt,
+        mergedAt,
+        aiAnalysis: aiAnalysis || false,
+        autoMerge: autoMerge || false,
+        merged: mergedAt ? true : false,
+        userId: userId,
+      },
+    });
+
+    res.json({ pullRequest: automatedPR });
+  } catch (error: unknown) {
+    console.error("Error saving automated PR:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.get("/:owner/:repo/check-coderabbit", async (req: Request, res: Response) => {
+  try {
+    const { owner, repo } = req.params;
+    
+    try {
+      const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}/installation`, {
+        headers: {
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+        params: {
+          per_page: 100,
+        },
+      });
+      
+      const installations = Array.isArray(response.data) ? response.data : [response.data];
+      const codeRabbitInstalled = installations.some((inst: any) => 
+        inst.app_slug === "coderabbitai" || inst.account?.login === "coderabbitai"
+      );
+      
+      res.json({ installed: codeRabbitInstalled });
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        res.json({ installed: false });
+      } else {
+        res.json({ installed: false });
+      }
+    }
+  } catch (error: unknown) {
+    console.error("Error checking CodeRabbit:", error);
+    res.json({ installed: false });
+  }
+});
+
 export default router;

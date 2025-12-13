@@ -9,6 +9,7 @@ import Repositories from "./pages/Repositories";
 import FileSelection from "./pages/FileSelection";
 import IssuesDisplay from "./pages/IssuesDisplay";
 import IssuesList from "./pages/IssuesList";
+import PRsList from "./pages/PRsList";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/repositories/:owner/:repo/files" element={<FileSelection />} />
           <Route path="/repositories/:owner/:repo/issues" element={<IssuesDisplay />} />
           <Route path="/repositories/:owner/:repo/issues-list" element={<IssuesList />} />
+          <Route path="/repositories/:owner/:repo/prs-list" element={<PRsList />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

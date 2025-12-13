@@ -29,3 +29,64 @@ model OAuthState {
   @@index([state])
 }
 
+model AutomatedIssue {
+  id              String   @id @default(uuid())
+  repositoryOwner String
+  repositoryName  String
+  issueNumber     Int
+  issueId         Int
+  title           String
+  body            String?
+  state           String
+  htmlUrl         String
+  assignees       Json     @default("[]")
+  labels          Json     @default("[]")
+  user            Json
+  comments        Int      @default(0)
+  createdAt       DateTime
+  updatedAt       DateTime
+  aiAnalysis      Boolean  @default(false)
+  autoAssign      Boolean  @default(false)
+  assignedTo      String?
+  userId          String
+  createdAtDb     DateTime @default(now())
+  
+  @@unique([repositoryOwner, repositoryName, issueNumber])
+  @@index([userId])
+  @@index([repositoryOwner, repositoryName])
+}
+
+model AutomatedPR {
+  id              String   @id @default(uuid())
+  repositoryOwner String
+  repositoryName  String
+  prNumber        Int
+  prId            Int
+  title           String
+  body            String?
+  state           String
+  htmlUrl         String
+  head            Json
+  base            Json
+  user            Json
+  labels          Json     @default("[]")
+  comments        Int      @default(0)
+  reviewComments Int      @default(0)
+  commits         Int      @default(0)
+  additions       Int      @default(0)
+  deletions       Int      @default(0)
+  changedFiles    Int      @default(0)
+  createdAt       DateTime
+  updatedAt       DateTime
+  mergedAt        DateTime?
+  aiAnalysis      Boolean  @default(false)
+  autoMerge       Boolean  @default(false)
+  merged          Boolean  @default(false)
+  userId          String
+  createdAtDb     DateTime @default(now())
+  
+  @@unique([repositoryOwner, repositoryName, prNumber])
+  @@index([userId])
+  @@index([repositoryOwner, repositoryName])
+}
+

@@ -272,8 +272,7 @@ router.get("/github/callback", async (req: Request, res: Response) => {
     });
     
     if (!appInstalled && GITHUB_APP_ID && isUserAccessToken) {
-      const appSlug = GITHUB_CLIENT_ID?.split(".")[0] || "autoauditai";
-      const installUrl = `https://github.com/apps/${appSlug}/installations/new?state=${state}`;
+      const installUrl = `https://github.com/apps/autoauditai/installations/select_target?state=${state}`;
       console.log("App not installed, redirecting to installation:", installUrl);
       console.log("Note: After installation, GitHub will redirect back to OAuth callback");
       res.redirect(302, installUrl);

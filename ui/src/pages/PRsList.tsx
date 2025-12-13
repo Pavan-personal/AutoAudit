@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Github, MessageSquare, User, Calendar, Tag, AlertCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, Github, MessageSquare, User, Calendar, Tag, AlertCircle, Sparkles, GitMerge, GitBranch } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
-interface Issue {
+interface PullRequest {
   id: number;
   number: number;
   title: string;
@@ -23,11 +23,21 @@ interface Issue {
   html_url: string;
   created_at: string;
   updated_at: string;
+  merged_at: string | null;
   comments: number;
-  assignees: Array<{
-    login: string;
-    avatar_url: string;
-  }>;
+  review_comments: number;
+  commits: number;
+  additions: number;
+  deletions: number;
+  changed_files: number;
+  head: {
+    ref: string;
+    sha: string;
+  };
+  base: {
+    ref: string;
+    sha: string;
+  };
   labels: Array<{
     name: string;
     color: string;
@@ -38,20 +48,21 @@ interface Issue {
   };
 }
 
-function IssuesList() {
+function PRsList() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
   const navigate = useNavigate();
-  const [issues, setIssues] = useState<Issue[]>([]);
-  const [automatedIssues, setAutomatedIssues] = useState<Set<number>>(new Set());
+  const [pullRequests, setPullRequests] = useState<PullRequest[]>([]);
+  const [automatedPRs, setAutomatedPRs] = useState<Set<number>>(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [automateDialog, setAutomateDialog] = useState<{ open: boolean; issue: Issue | null }>({ open: false, issue: null });
+  const [automateDialog, setAutomateDialog] = useState<{ open: boolean; pr: PullRequest | null }>({ open: false, pr: null });
   const [aiAnalysis, setAiAnalysis] = useState(false);
-  const [autoAssign, setAutoAssign] = useState(false);
+  const [autoMerge, setAutoMerge] = useState(false);
+  const [codeRabbitInstalled, setCodeRabbitInstalled] = useState<boolean | null>(null);
   const API_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
 
   useEffect(() => {
-    async function fetchIssues() {
+    async function fetchPRs() {
       if (!owner || !repo) {
         setError("Invalid repository");
         setLoading(false);
@@ -59,7 +70,7 @@ function IssuesList() {
       }
 
       try {
-        const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/issues`, {
+        const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/pull-requests`, {
           method: "GET",
           credentials: "include",
           headers: {
@@ -76,21 +87,21 @@ function IssuesList() {
         }
 
         const data = await response.json();
-        setIssues(data.issues || []);
+        setPullRequests(data.pullRequests || []);
         setLoading(false);
       } catch (error) {
-        console.error("Error fetching issues:", error);
+        console.error("Error fetching pull requests:", error);
         setLoading(false);
-        setError("Failed to load issues");
+        setError("Failed to load pull requests");
       }
     }
 
-    fetchIssues();
+    fetchPRs();
     
-    async function fetchAutomatedIssues() {
+    async function fetchAutomatedPRs() {
       if (!owner || !repo) return;
       try {
-        const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/automated-issues`, {
+        const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/automated-prs`, {
           method: "GET",
           credentials: "include",
           headers: {
@@ -99,66 +110,106 @@ function IssuesList() {
         });
         if (response.ok) {
           const data = await response.json();
-          setAutomatedIssues(new Set(data.issues.map((issue: { issueNumber: number }) => issue.issueNumber)));
+          setAutomatedPRs(new Set(data.pullRequests.map((pr: { prNumber: number }) => pr.prNumber)));
         }
       } catch (error) {
-        console.error("Error fetching automated issues:", error);
+        console.error("Error fetching automated PRs:", error);
       }
     }
     
-    fetchAutomatedIssues();
+    fetchAutomatedPRs();
+    
+    async function checkCodeRabbit() {
+      try {
+        const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/check-coderabbit`, {
+          method: "GET",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setCodeRabbitInstalled(data.installed);
+        } else {
+          setCodeRabbitInstalled(false);
+        }
+      } catch {
+        setCodeRabbitInstalled(false);
+      }
+    }
+    
+    checkCodeRabbit();
   }, [owner, repo, navigate, API_URL]);
   
-  async function handleAutomate(issue: Issue) {
-    setAutomateDialog({ open: true, issue });
+  async function handleAutomate(pr: PullRequest) {
+    if (codeRabbitInstalled === false) {
+      toast.error("CodeRabbit Not Installed", {
+        description: "Please install CodeRabbit in your repository to use PR automation features.",
+        action: {
+          label: "Install CodeRabbit",
+          onClick: () => window.open("https://github.com/apps/coderabbitai/installations/new", "_blank"),
+        },
+        duration: 10000,
+      });
+      return;
+    }
+    setAutomateDialog({ open: true, pr });
   }
   
   async function confirmAutomate() {
-    if (!automateDialog.issue || !owner || !repo) return;
+    if (!automateDialog.pr || !owner || !repo) return;
     
     try {
-      const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/automated-issues`, {
+      const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/automated-prs`, {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          issueNumber: automateDialog.issue.number,
-          issueId: automateDialog.issue.id,
-          title: automateDialog.issue.title,
-          body: automateDialog.issue.body,
-          state: automateDialog.issue.state,
-          htmlUrl: automateDialog.issue.html_url,
-          assignees: automateDialog.issue.assignees,
-          labels: automateDialog.issue.labels,
-          user: automateDialog.issue.user,
-          comments: automateDialog.issue.comments,
-          createdAt: automateDialog.issue.created_at,
-          updatedAt: automateDialog.issue.updated_at,
+          prNumber: automateDialog.pr.number,
+          prId: automateDialog.pr.id,
+          title: automateDialog.pr.title,
+          body: automateDialog.pr.body,
+          state: automateDialog.pr.state,
+          htmlUrl: automateDialog.pr.html_url,
+          head: automateDialog.pr.head,
+          base: automateDialog.pr.base,
+          user: automateDialog.pr.user,
+          labels: automateDialog.pr.labels,
+          comments: automateDialog.pr.comments,
+          reviewComments: automateDialog.pr.review_comments,
+          commits: automateDialog.pr.commits,
+          additions: automateDialog.pr.additions,
+          deletions: automateDialog.pr.deletions,
+          changedFiles: automateDialog.pr.changed_files,
+          createdAt: automateDialog.pr.created_at,
+          updatedAt: automateDialog.pr.updated_at,
+          mergedAt: automateDialog.pr.merged_at,
           aiAnalysis,
-          autoAssign,
+          autoMerge,
         }),
       });
       
       if (!response.ok) {
-        throw new Error("Failed to save automated issue");
+        throw new Error("Failed to save automated PR");
       }
       
-      const newAutomated = new Set(automatedIssues);
-      newAutomated.add(automateDialog.issue.number);
-      setAutomatedIssues(newAutomated);
+      const newAutomated = new Set(automatedPRs);
+      newAutomated.add(automateDialog.pr.number);
+      setAutomatedPRs(newAutomated);
       
-      toast.success("Issue Added to Automation", {
-        description: `Issue #${automateDialog.issue.number} is now being tracked for AI-powered automation.`,
+      toast.success("PR Added to Automation", {
+        description: `PR #${automateDialog.pr.number} is now being tracked for AI-powered automation.`,
       });
       
-      setAutomateDialog({ open: false, issue: null });
+      setAutomateDialog({ open: false, pr: null });
       setAiAnalysis(false);
-      setAutoAssign(false);
+      setAutoMerge(false);
     } catch (error) {
-      console.error("Error automating issue:", error);
-      toast.error("Failed to Automate Issue", {
+      console.error("Error automating PR:", error);
+      toast.error("Failed to Automate PR", {
         description: error instanceof Error ? error.message : "Please try again later.",
       });
     }
@@ -169,7 +220,7 @@ function IssuesList() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="mt-4 text-muted-foreground">Loading issues...</p>
+          <p className="mt-4 text-muted-foreground">Loading pull requests...</p>
         </div>
       </div>
     );
@@ -187,7 +238,6 @@ function IssuesList() {
   }
 
   return (
-    <>
     <div className="min-h-screen bg-background">
       <div className="container-custom py-12">
         <div className="max-w-6xl mx-auto">
@@ -201,21 +251,44 @@ function IssuesList() {
                 <ArrowLeft className="w-4 h-4" />
               </Button>
               <div>
-                <h1 className="text-4xl font-bold mb-2">Repository Issues</h1>
+                <h1 className="text-4xl font-bold mb-2">Pull Requests</h1>
                 <p className="text-muted-foreground">
-                  {owner}/{repo} - All open issues ready for AI-powered automation
+                  {owner}/{repo} - All open PRs ready for AI-powered automation
                 </p>
               </div>
             </div>
           </div>
 
-          {issues.length === 0 ? (
+          {codeRabbitInstalled === false && (
+            <Card className="mb-6 border-yellow-500/50 bg-yellow-500/10">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-yellow-500 mb-1">CodeRabbit Installation Required</p>
+                    <p className="text-sm text-muted-foreground mb-3">
+                      To use PR automation features, you need to install CodeRabbit in your repository. CodeRabbit provides AI-powered code review comments that our system uses to make intelligent merge decisions.
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => window.open("https://github.com/apps/coderabbitai/installations/new", "_blank")}
+                    >
+                      Install CodeRabbit
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {pullRequests.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <AlertCircle className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No open issues found</p>
+                <GitMerge className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">No open pull requests found</p>
                 <p className="text-sm text-muted-foreground mt-2">
-                  All issues in this repository are closed or there are no issues yet.
+                  All pull requests in this repository are closed or merged, or there are no PRs yet.
                 </p>
               </CardContent>
             </Card>
@@ -223,40 +296,44 @@ function IssuesList() {
             <>
               <div className="mb-6">
                 <p className="text-sm text-muted-foreground">
-                  Showing {issues.length} open issue{issues.length !== 1 ? "s" : ""} - Use AI to automatically analyze and assign issues to the right team members
+                  Showing {pullRequests.length} open pull request{pullRequests.length !== 1 ? "s" : ""} - Use AI to automatically analyze CodeRabbit comments and merge PRs when ready
                 </p>
               </div>
               <div className="space-y-4">
-                {issues.map((issue) => (
-                  <Card key={issue.id} className="glass-card-hover">
+                {pullRequests.map((pr) => (
+                  <Card key={pr.id} className="glass-card-hover">
                     <CardHeader>
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
-                            <Github className="w-4 h-4 text-muted-foreground" />
+                            <GitMerge className="w-4 h-4 text-muted-foreground" />
                             <CardTitle className="text-lg">
                               <a
-                                href={issue.html_url}
+                                href={pr.html_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="hover:underline"
                               >
-                                #{issue.number}: {issue.title}
+                                #{pr.number}: {pr.title}
                               </a>
                             </CardTitle>
                           </div>
                           <CardDescription className="mt-2 line-clamp-2">
-                            {issue.body || "No description provided"}
+                            {pr.body || "No description provided"}
                           </CardDescription>
                         </div>
                       </div>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap items-center gap-4 mb-4">
-                        {issue.labels.length > 0 && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <GitBranch className="w-4 h-4" />
+                          <span>{pr.head.ref} → {pr.base.ref}</span>
+                        </div>
+                        {pr.labels.length > 0 && (
                           <div className="flex items-center gap-2 flex-wrap">
                             <Tag className="w-4 h-4 text-muted-foreground" />
-                            {issue.labels.map((label) => (
+                            {pr.labels.map((label) => (
                               <Badge
                                 key={label.name}
                                 variant="outline"
@@ -272,53 +349,44 @@ function IssuesList() {
                         )}
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <MessageSquare className="w-4 h-4" />
-                          <span>{issue.comments} comment{issue.comments !== 1 ? "s" : ""}</span>
+                          <span>{pr.comments} comment{pr.comments !== 1 ? "s" : ""}</span>
                         </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <Calendar className="w-4 h-4" />
-                          <span>Updated {new Date(issue.updated_at).toLocaleDateString()}</span>
+                          <span>Updated {new Date(pr.updated_at).toLocaleDateString()}</span>
                         </div>
-                        {issue.user && (
+                        {pr.user && (
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <User className="w-4 h-4" />
-                            <span>by {issue.user.login}</span>
+                            <img
+                              src={pr.user.avatar_url}
+                              alt={pr.user.login}
+                              className="w-5 h-5 rounded-full"
+                            />
+                            <span>{pr.user.login}</span>
                           </div>
                         )}
-                        {issue.assignees.length > 0 && (
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">Assigned to:</span>
-                            <div className="flex items-center gap-1">
-                              {issue.assignees.map((assignee, idx) => (
-                                <img
-                                  key={idx}
-                                  src={assignee.avatar_url}
-                                  alt={assignee.login}
-                                  className="w-6 h-6 rounded-full border border-border"
-                                  title={assignee.login}
-                                />
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <span>+{pr.additions} / -{pr.deletions}</span>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between pt-4 border-t border-border">
                         <div className="text-sm text-muted-foreground">
-                          <span className="font-medium">Status:</span> {issue.state === "open" ? "Open" : "Closed"}
+                          <span className="font-medium">Status:</span> {pr.state === "open" ? "Open" : pr.merged_at ? "Merged" : "Closed"}
                         </div>
                         <div className="flex gap-2">
                           <Button
                             variant="outline"
-                            onClick={() => window.open(issue.html_url, "_blank")}
+                            onClick={() => window.open(pr.html_url, "_blank")}
                           >
                             View on GitHub
                           </Button>
-                          {automatedIssues.has(issue.number) ? (
+                          {automatedPRs.has(pr.number) ? (
                             <Button disabled variant="outline">
                               <Sparkles className="w-4 h-4 mr-2" />
                               Automated
                             </Button>
                           ) : (
-                            <Button onClick={() => handleAutomate(issue)}>
+                            <Button onClick={() => handleAutomate(pr)} disabled={codeRabbitInstalled === false}>
                               <Sparkles className="w-4 h-4 mr-2" />
                               Automate
                             </Button>
@@ -333,14 +401,13 @@ function IssuesList() {
           )}
         </div>
       </div>
-    </div>
 
-      <Dialog open={automateDialog.open} onOpenChange={(open) => setAutomateDialog({ open, issue: null })}>
+      <Dialog open={automateDialog.open} onOpenChange={(open) => setAutomateDialog({ open, pr: null })}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Automate Issue #{automateDialog.issue?.number}</DialogTitle>
+            <DialogTitle>Automate PR #{automateDialog.pr?.number}</DialogTitle>
             <DialogDescription>
-              Add this issue to automated tracking. AI will analyze and help assign it to the right team member.
+              Add this pull request to automated tracking. AI will analyze CodeRabbit comments and automatically merge when ready.
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -353,15 +420,15 @@ function IssuesList() {
                 className="rounded border-gray-300"
               />
               <label htmlFor="aiAnalysis" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                Analyze with AI and assign to valid user
+                Analyze with AI and merge based on CodeRabbit comments
               </label>
             </div>
             <p className="text-xs text-muted-foreground">
-              When enabled, our AI will analyze the issue content and automatically assign it to the most appropriate team member based on their expertise and workload.
+              When enabled, our AI will analyze CodeRabbit review comments and automatically merge the PR when all conditions are met and CodeRabbit approves.
             </p>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setAutomateDialog({ open: false, issue: null })}>
+            <Button variant="outline" onClick={() => setAutomateDialog({ open: false, pr: null })}>
               Cancel
             </Button>
             <Button onClick={confirmAutomate}>
@@ -370,8 +437,8 @@ function IssuesList() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
 
-export default IssuesList;
+export default PRsList;
