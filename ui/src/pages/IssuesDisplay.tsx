@@ -31,6 +31,7 @@ function IssuesDisplay() {
   const navigate = useNavigate();
   const [creatingIssues, setCreatingIssues] = useState<Set<number>>(new Set());
   const API_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
+  const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || "";
 
   const analysis = location.state?.analysis as AnalysisData | undefined;
   const repository = location.state?.repository as { owner: string; repo: string } | undefined;
@@ -68,8 +69,14 @@ function IssuesDisplay() {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        if (response.status === 403 && errorData.error?.includes("not accessible by integration")) {
-          alert("GitHub token doesn't have permission to create issues. Please re-authenticate by logging out and logging back in.");
+        if (response.status === 403) {
+          if (errorData.error?.includes("not accessible by integration") || errorData.error?.includes("not installed")) {
+            const installUrl = `https://github.com/apps/${GITHUB_CLIENT_ID?.split(".")[0] || "autoauditai"}/installations/new`;
+            const message = `GitHub App is not installed on your account.\n\nPlease install it first:\n${installUrl}\n\nAfter installation, try creating the issue again.`;
+            alert(message);
+          } else {
+            alert("GitHub token doesn't have permission to create issues. Please re-authenticate by logging out and logging back in.");
+          }
         } else {
           throw new Error(errorData.error || "Failed to create issue");
         }

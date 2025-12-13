@@ -9,6 +9,7 @@ const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "your
 
 const GITHUB_APP_ID = process.env.GITHUB_APP_ID;
 const GITHUB_PRIVATE_KEY = process.env.GITHUB_PRIVATE_KEY;
+const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 
 declare module "express-session" {
   interface SessionData {
@@ -150,6 +151,61 @@ async function getGitHubToken(req: Request): Promise<string | null> {
   
   return user?.githubToken || null;
 }
+
+router.get("/installation-status", async (req: Request, res: Response) => {
+  try {
+    const token = await getGitHubToken(req);
+    if (!token) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const isUserAccessToken = token.startsWith("ghu_");
+    const authHeader = isUserAccessToken ? `Bearer ${token}` : `token ${token}`;
+
+    const userResponse = await axios.get("https://api.github.com/user", {
+      headers: {
+        Authorization: authHeader,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+
+    const username = userResponse.data.login;
+
+    if (!GITHUB_APP_ID || !GITHUB_PRIVATE_KEY) {
+      res.json({
+        installed: false,
+        message: "GitHub App configuration missing. Installation check unavailable.",
+        installUrl: null,
+      });
+      return;
+    }
+
+    const installationId = await getInstallationId(username);
+    const installUrl = GITHUB_CLIENT_ID
+      ? `https://github.com/apps/${GITHUB_CLIENT_ID.split(".")[0]}/installations/new`
+      : null;
+
+    res.json({
+      installed: installationId !== null,
+      installationId: installationId,
+      installUrl: installUrl,
+      message: installationId
+        ? "GitHub App is installed and ready to create issues."
+        : "GitHub App is not installed. Please install it to create issues.",
+    });
+  } catch (error: unknown) {
+    console.error("Error checking installation status:", error);
+    if (axios.isAxiosError(error)) {
+      res.status(error.response?.status || 500).json({
+        error: error.response?.data?.message || "Failed to check installation status",
+      });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+});
 
 router.get("/", async (req: Request, res: Response) => {
   try {
