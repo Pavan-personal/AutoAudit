@@ -20,8 +20,7 @@
     "pre-commit": "^1.2.2",
     "prisma": "^6.5.0",
     "rimraf": "^6.0.1",
-    "uuid": "^11.1.0",
-    "cline": "^1.0.0"
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",

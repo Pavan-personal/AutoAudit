@@ -187,20 +187,25 @@ async function executeCline(prompt: string, workingDir?: string, timeout: number
     const promptFile = path.join(tempDir, "cline-prompt.txt");
     fs.writeFileSync(promptFile, prompt, "utf8");
 
-    let clineCommand: string;
-    const clinePath = path.join(process.cwd(), "node_modules", ".bin", "cline");
-    const clinePathAlt = path.join(__dirname, "..", "..", "node_modules", ".bin", "cline");
+    const npmCacheDir = path.join(tempDir, ".npm-cache");
+    const npmTmpDir = path.join(tempDir, ".npm-tmp");
     
-    if (fs.existsSync(clinePath)) {
-      clineCommand = `cat "${promptFile}" | "${clinePath}" 2>&1`;
-      console.log("Using locally installed Cline from process.cwd()");
-    } else if (fs.existsSync(clinePathAlt)) {
-      clineCommand = `cat "${promptFile}" | "${clinePathAlt}" 2>&1`;
-      console.log("Using locally installed Cline from __dirname");
-    } else {
-      clineCommand = `cat "${promptFile}" | npx --yes --prefer-offline --no-audit --no-fund --no-install cline 2>&1`;
-      console.log("Falling back to npx (Cline not found locally)");
+    if (!fs.existsSync(npmCacheDir)) {
+      fs.mkdirSync(npmCacheDir, { recursive: true });
     }
+    if (!fs.existsSync(npmTmpDir)) {
+      fs.mkdirSync(npmTmpDir, { recursive: true });
+    }
+
+    env.npm_config_cache = npmCacheDir;
+    env.npm_config_tmp = npmTmpDir;
+    env.npm_config_prefix = tempDir;
+    env.HOME = tempDir;
+    env.TMPDIR = tempDir;
+    env.TMP = tempDir;
+    env.TEMP = tempDir;
+
+    const clineCommand = `cat "${promptFile}" | npx --yes --prefer-offline --no-audit --no-fund --cache "${npmCacheDir}" cline 2>&1`;
     
     const options = {
       cwd: tempDir,
