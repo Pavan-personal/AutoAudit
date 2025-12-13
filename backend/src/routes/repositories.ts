@@ -157,8 +157,7 @@ async function getGitHubToken(req: Request): Promise<string | null> {
   return user?.githubToken || null;
 }
 
-async function executeCline(prompt: string, _workingDir?: string, timeout: number = 300000): Promise<{ stdout: string; stderr: string }> {
-  // Note: workingDir parameter kept for API compatibility but not used (direct API calls don't need it)
+async function executeCline(prompt: string, timeout: number = 300000): Promise<{ stdout: string; stderr: string }> {
   try {
     const apiKey = VERCEL_AI_GATEWAY_API_KEY || OPENAI_API_KEY;
     const baseURL = VERCEL_AI_GATEWAY_API_KEY 
@@ -1615,7 +1614,7 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
         : `Analyze this entire codebase (${fileCount} files: ${filePaths}${moreFiles}). Perform a comprehensive code review and identify bugs, security vulnerabilities, code quality issues, performance problems, and architectural concerns. For each issue found, provide: 1) A clear title, 2) File path and line numbers if possible, 3) Detailed description, 4) Priority level (HIGH/MEDIUM/LOW), 5) Type (bugs, security, performance, architecture, etc.). Format the output clearly with file paths.`;
 
       console.log("Executing Cline analysis...");
-      const { stdout, stderr } = await executeCline(prompt, tempDir, 600000);
+      const { stdout, stderr } = await executeCline(prompt, 600000);
 
       const analysisOutput = stdout || stderr || "";
       
@@ -1847,7 +1846,7 @@ Format your response clearly with the score prominently displayed.`;
     
     try {
       console.log(`Executing Cline PR analysis for PR #${prNumber}...`);
-      const { stdout, stderr } = await executeCline(analysisPrompt, tempDir, 300000);
+      const { stdout, stderr } = await executeCline(analysisPrompt, 300000);
 
       const analysisOutput = stdout || stderr || "";
       
