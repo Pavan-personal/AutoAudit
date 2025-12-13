@@ -15,8 +15,14 @@ const PORT = process.env.PORT || 3000;
 const CLIENT_URL = process.env.CLIENT_URL || process.env.FRONTEND_URL;
 
 app.set("trust proxy", 1);
-app.use(express.json());
 app.use(cookieParser());
+
+app.use((req, res, next) => {
+  if (req.path.startsWith("/webhook/")) {
+    return next();
+  }
+  express.json()(req, res, next);
+});
 
 const allowedOrigins = [
   CLIENT_URL,

@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id          String    @id @default(uuid())
-  githubId    String?   @unique
-  email       String    @unique
-  name        String
-  image       String?
-  githubToken String?
-  createdAt   DateTime  @default(now())
+  id           String    @id @default(uuid())
+  githubId     String?   @unique
+  email        String    @unique
+  name         String
+  image        String?
+  githubToken  String?
+  appInstalled Boolean   @default(false)
+  createdAt    DateTime  @default(now())
   
   @@index([githubId])
   @@index([email])

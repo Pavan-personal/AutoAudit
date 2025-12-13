@@ -433,6 +433,7 @@ function FileSelection() {
                 handleAnalyze();
               }}
               disabled={analyzing}
+              className="hover:bg-black/10"
             >
               Skip
             </Button>

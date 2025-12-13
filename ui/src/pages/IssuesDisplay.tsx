@@ -4,6 +4,7 @@ import { ArrowLeft, AlertTriangle, CheckCircle, Loader2, Github } from "lucide-r
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 interface Issue {
   title: string;
@@ -30,6 +31,7 @@ function IssuesDisplay() {
   const location = useLocation();
   const navigate = useNavigate();
   const [creatingIssues, setCreatingIssues] = useState<Set<number>>(new Set());
+  const [createdIssues, setCreatedIssues] = useState<Set<number>>(new Set());
   const API_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
   const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || "";
 
@@ -72,10 +74,18 @@ function IssuesDisplay() {
         if (response.status === 403) {
           if (errorData.error?.includes("not accessible by integration") || errorData.error?.includes("not installed")) {
             const installUrl = `https://github.com/apps/${GITHUB_CLIENT_ID?.split(".")[0] || "autoauditai"}/installations/new`;
-            const message = `GitHub App is not installed on your account.\n\nPlease install it first:\n${installUrl}\n\nAfter installation, try creating the issue again.`;
-            alert(message);
+            toast.error("GitHub App Not Installed", {
+              description: `Please install the GitHub App first. Click here to install.`,
+              action: {
+                label: "Install App",
+                onClick: () => window.open(installUrl, "_blank"),
+              },
+              duration: 10000,
+            });
           } else {
-            alert("GitHub token doesn't have permission to create issues. Please re-authenticate by logging out and logging back in.");
+            toast.error("Permission Denied", {
+              description: "GitHub token doesn't have permission to create issues. Please re-authenticate.",
+            });
           }
         } else {
           throw new Error(errorData.error || "Failed to create issue");
@@ -86,17 +96,31 @@ function IssuesDisplay() {
         return;
       }
 
+      const issueData = await response.json();
       const newIssues = new Set(creatingIssues);
       newIssues.delete(issueIndex);
       setCreatingIssues(newIssues);
-      alert("Issue created successfully!");
+      
+      const createdSet = new Set(createdIssues);
+      createdSet.add(issueIndex);
+      setCreatedIssues(createdSet);
+      
+      toast.success("Issue Created", {
+        description: `Successfully created issue: ${issue.title}`,
+        action: issueData.issue?.html_url ? {
+          label: "View Issue",
+          onClick: () => window.open(issueData.issue.html_url, "_blank"),
+        } : undefined,
+      });
     } catch (error) {
       console.error("Error creating issue:", error);
       const newIssues = new Set(creatingIssues);
       newIssues.delete(issueIndex);
       setCreatingIssues(newIssues);
       if (error instanceof Error) {
-        alert(`Failed to create issue: ${error.message}`);
+        toast.error("Failed to Create Issue", {
+          description: error.message,
+        });
       }
     }
   }
@@ -184,6 +208,7 @@ function IssuesDisplay() {
                         const type = extractType(issue.body);
                         const globalIndex = fileIndex * 1000 + issueIndex;
                         const isCreating = creatingIssues.has(globalIndex);
+                        const isCreated = createdIssues.has(globalIndex);
 
                         return (
                           <Card key={issueIndex} className="bg-secondary/30 border-border">
@@ -225,14 +250,19 @@ function IssuesDisplay() {
                               />
                               <Button
                                 onClick={() => createIssue(issue, fileIndex, globalIndex)}
-                                disabled={isCreating}
-                                variant="outline"
+                                disabled={isCreating || isCreated}
+                                variant={isCreated ? "default" : "outline"}
                                 className="w-full"
                               >
                                 {isCreating ? (
                                   <>
                                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                                     Creating Issue...
+                                  </>
+                                ) : isCreated ? (
+                                  <>
+                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                    Issue Created
                                   </>
                                 ) : (
                                   <>

@@ -333,6 +333,66 @@ router.get("/:owner/:repo/contents/:path", async (req: Request, res: Response) =
 });
 
 
+router.get("/:owner/:repo/issues", async (req: Request, res: Response) => {
+  try {
+    const { owner, repo } = req.params;
+    const token = await getGitHubToken(req);
+    
+    if (!token) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const isUserAccessToken = token.startsWith("ghu_");
+    const authHeader = isUserAccessToken ? `Bearer ${token}` : `token ${token}`;
+
+    let authHeaderForRequest: string;
+
+    if (GITHUB_APP_ID && GITHUB_PRIVATE_KEY) {
+      const installationId = await getInstallationId(owner, repo);
+      if (installationId) {
+        const installationToken = await generateInstallationToken(installationId);
+        if (installationToken) {
+          authHeaderForRequest = `Bearer ${installationToken}`;
+        } else {
+          authHeaderForRequest = authHeader;
+        }
+      } else {
+        authHeaderForRequest = authHeader;
+      }
+    } else {
+      authHeaderForRequest = authHeader;
+    }
+
+    const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}/issues`, {
+      headers: {
+        Authorization: authHeaderForRequest,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+      params: {
+        state: "open",
+        per_page: 100,
+        sort: "updated",
+        direction: "desc",
+      },
+    });
+
+    const issues = response.data.filter((issue: any) => !issue.pull_request);
+
+    res.json({ issues });
+  } catch (error: unknown) {
+    console.error("Error fetching issues:", error);
+    if (axios.isAxiosError(error)) {
+      res.status(error.response?.status || 500).json({
+        error: error.response?.data?.message || "Failed to fetch issues",
+      });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+});
+
 router.post("/:owner/:repo/issues", async (req: Request, res: Response) => {
   try {
     const { owner, repo } = req.params;

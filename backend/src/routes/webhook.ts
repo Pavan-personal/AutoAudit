@@ -34,18 +34,36 @@ function verifyGitHubSignature(req: Request): boolean {
 }
 
 router.post("/github", express.raw({ type: "application/json" }), (req: Request, res: Response) => {
-  const rawBody = req.body as Buffer;
-  (req as any).rawBody = rawBody;
+  const rawBody = req.body;
   
+  if (!rawBody) {
+    console.error("[WEBHOOK /github] No body received");
+    res.status(400).json({ error: "No body" });
+    return;
+  }
+
   let webhookPayload: any;
   try {
-    const bodyString = Buffer.isBuffer(rawBody) ? rawBody.toString("utf8") : String(rawBody);
+    let bodyString: string;
+    if (Buffer.isBuffer(rawBody)) {
+      bodyString = rawBody.toString("utf8");
+    } else if (typeof rawBody === "string") {
+      bodyString = rawBody;
+    } else {
+      console.error("[WEBHOOK /github] Unexpected body type:", typeof rawBody);
+      res.status(400).json({ error: "Invalid body type" });
+      return;
+    }
+    
     webhookPayload = JSON.parse(bodyString);
+    (req as any).rawBody = Buffer.from(bodyString, "utf8");
     req.body = webhookPayload;
   } catch (error) {
     console.error("[WEBHOOK /github] Failed to parse JSON body:", error);
     console.error("[WEBHOOK /github] Raw body type:", typeof rawBody);
-    console.error("[WEBHOOK /github] Raw body preview:", rawBody?.toString?.()?.substring(0, 200));
+    if (Buffer.isBuffer(rawBody)) {
+      console.error("[WEBHOOK /github] Raw body preview:", rawBody.toString("utf8").substring(0, 200));
+    }
     res.status(400).json({ error: "Invalid JSON" });
     return;
   }
