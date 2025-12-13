@@ -191,6 +191,12 @@ router.post("/:owner/:repo/issues", async (req: Request, res: Response) => {
 
     const isUserAccessToken = token.startsWith("ghu_");
     const authHeader = isUserAccessToken ? `Bearer ${token}` : `token ${token}`;
+    
+    console.log("=== CREATING GITHUB ISSUE ===");
+    console.log("Token type:", isUserAccessToken ? "GitHub App user access token (ghu_)" : "OAuth token");
+    console.log("Using auth header:", authHeader.substring(0, 20) + "...");
+    console.log("Repository:", `${owner}/${repo}`);
+    console.log("=============================");
 
     const response = await axios.post(
       `https://api.github.com/repos/${owner}/${repo}/issues`,

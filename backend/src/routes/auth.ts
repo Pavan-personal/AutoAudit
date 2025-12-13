@@ -133,6 +133,12 @@ router.get("/github/callback", async (req: Request, res: Response) => {
 
     const isUserAccessToken = access_token.startsWith("ghu_");
     const authHeader = isUserAccessToken ? `Bearer ${access_token}` : `token ${access_token}`;
+    
+    console.log("=== TOKEN TYPE DETECTION ===");
+    console.log("Token prefix:", access_token.substring(0, 4));
+    console.log("Is GitHub App user access token (ghu_):", isUserAccessToken);
+    console.log("Using auth header format:", isUserAccessToken ? "Bearer" : "token");
+    console.log("===========================");
 
     const userResponse = await axios.get("https://api.github.com/user", {
       headers: {
