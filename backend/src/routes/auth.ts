@@ -34,7 +34,7 @@ router.get("/github", async (_req: Request, res: Response) => {
     });
     
     console.log("State saved to database");
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(GITHUB_CALLBACK_URL)}&scope=${encodeURIComponent("user:email repo")}&state=${state}`;
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(GITHUB_CALLBACK_URL)}&scope=${encodeURIComponent("user:email repo issues:write")}&state=${state}`;
     res.redirect(authUrl);
   } catch (error) {
     console.error("Error creating OAuth state:", error);

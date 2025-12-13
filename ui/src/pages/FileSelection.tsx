@@ -71,9 +71,17 @@ function FileSelection() {
       }
 
       const data = await response.json();
-      setItems(data.items || []);
+      const items = data.items || [];
+      
+      const sortedItems = [...items].sort((a, b) => {
+        if (a.type === "dir" && b.type === "file") return -1;
+        if (a.type === "file" && b.type === "dir") return 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      setItems(sortedItems);
 
-      const treeNodes: TreeNode[] = (data.items || []).map((item: FileItem) => ({
+      const treeNodes: TreeNode[] = sortedItems.map((item: FileItem) => ({
         item,
         children: [],
         expanded: false,
@@ -135,7 +143,15 @@ function FileSelection() {
       }
 
       const data = await response.json();
-      const children: TreeNode[] = (data.items || []).map((item: FileItem) => ({
+      const items = data.items || [];
+      
+      const sortedItems = [...items].sort((a, b) => {
+        if (a.type === "dir" && b.type === "file") return -1;
+        if (a.type === "file" && b.type === "dir") return 1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      const children: TreeNode[] = sortedItems.map((item: FileItem) => ({
         item,
         children: [],
         expanded: false,

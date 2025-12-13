@@ -102,8 +102,14 @@ router.get("/:owner/:repo/contents", async (req: Request, res: Response) => {
     });
 
     const items = Array.isArray(response.data) ? response.data : [response.data];
+    
+    const sortedItems = [...items].sort((a: any, b: any) => {
+      if (a.type === "dir" && b.type === "file") return -1;
+      if (a.type === "file" && b.type === "dir") return 1;
+      return a.name.localeCompare(b.name);
+    });
 
-    res.json({ items });
+    res.json({ items: sortedItems });
   } catch (error: unknown) {
     console.error("Error fetching repository contents:", error);
     if (axios.isAxiosError(error)) {
@@ -168,6 +174,24 @@ router.post("/:owner/:repo/issues", async (req: Request, res: Response) => {
 
     if (!title || !body) {
       res.status(400).json({ error: "Title and body are required" });
+      return;
+    }
+
+    const testResponse = await axios.get("https://api.github.com/user", {
+      headers: {
+        Authorization: `token ${token}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    });
+
+    const tokenScopes = testResponse.headers["x-oauth-scopes"] || "";
+    console.log("Token scopes:", tokenScopes);
+    
+    if (!tokenScopes.includes("repo") && !tokenScopes.includes("write:repo")) {
+      res.status(403).json({
+        error: "Token missing required 'repo' scope. Please re-authenticate.",
+        scopes: tokenScopes,
+      });
       return;
     }
 
