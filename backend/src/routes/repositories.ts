@@ -2,13 +2,9 @@ import express, { Request, Response } from "express";
 import { PrismaClient } from "@prisma/client";
 import axios from "axios";
 import jwt from "jsonwebtoken";
-import { exec } from "child_process";
-import { promisify } from "util";
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-
-const execAsync = promisify(exec);
 
 const router = express.Router();
 const prisma = new PrismaClient();
