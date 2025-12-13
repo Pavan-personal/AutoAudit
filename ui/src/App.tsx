@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import Repositories from "./pages/Repositories";
 import FileSelection from "./pages/FileSelection";
+import ClineFileSelection from "./pages/ClineFileSelection";
 import IssuesDisplay from "./pages/IssuesDisplay";
 import IssuesList from "./pages/IssuesList";
 import PRsList from "./pages/PRsList";
@@ -25,6 +26,7 @@ const App = () => (
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/repositories" element={<Repositories />} />
           <Route path="/repositories/:owner/:repo/files" element={<FileSelection />} />
+          <Route path="/repositories/:owner/:repo/files-cline" element={<ClineFileSelection />} />
           <Route path="/repositories/:owner/:repo/issues" element={<IssuesDisplay />} />
           <Route path="/repositories/:owner/:repo/issues-list" element={<IssuesList />} />
           <Route path="/repositories/:owner/:repo/prs-list" element={<PRsList />} />

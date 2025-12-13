@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Github, Search, ArrowLeft, Folder } from "lucide-react";
+import { Github, Search, ArrowLeft, Folder, Sparkles, Brain } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -80,8 +80,12 @@ function Repositories() {
     setFilteredRepos(filtered);
   }, [searchQuery, repositories]);
 
-  function handleAudit(repo: Repository) {
-    navigate(`/repositories/${repo.full_name}/files`);
+  function handleAudit(repo: Repository, useCline: boolean = false) {
+    if (useCline) {
+      navigate(`/repositories/${repo.full_name}/files-cline`);
+    } else {
+      navigate(`/repositories/${repo.full_name}/files`);
+    }
   }
 
   if (loading) {
@@ -179,29 +183,48 @@ function Repositories() {
                         {new Date(repo.updated_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <Button
-                        onClick={() => handleAudit(repo)}
-                        variant="outline"
-                        className="w-full"
-                      >
-                        Audit
-                      </Button>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => navigate(`/repositories/${repo.full_name}/issues-list`)}
-                          variant="outline"
-                          className="flex-1"
-                        >
-                          Issues
-                        </Button>
-                        <Button
-                          onClick={() => navigate(`/repositories/${repo.full_name}/prs-list`)}
-                          variant="outline"
-                          className="flex-1"
-                        >
-                          PRs
-                        </Button>
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Code Audit</p>
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => handleAudit(repo, false)}
+                            variant="outline"
+                            className="flex-1 group hover:bg-primary/10 hover:border-primary/50 transition-all"
+                          >
+                            <Brain className="w-4 h-4 mr-2 group-hover:text-primary" />
+                            Oumi
+                          </Button>
+                          <Button
+                            onClick={() => handleAudit(repo, true)}
+                            variant="outline"
+                            className="flex-1 group hover:bg-primary/10 hover:border-primary/50 transition-all"
+                          >
+                            <Sparkles className="w-4 h-4 mr-2 group-hover:text-primary" />
+                            Cline
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          AI-powered code analysis to detect issues and create GitHub issues automatically
+                        </p>
+                      </div>
+                      <div className="pt-2 border-t border-border">
+                        <div className="flex gap-2">
+                          <Button
+                            onClick={() => navigate(`/repositories/${repo.full_name}/issues-list`)}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            Issues
+                          </Button>
+                          <Button
+                            onClick={() => navigate(`/repositories/${repo.full_name}/prs-list`)}
+                            variant="outline"
+                            className="flex-1"
+                          >
+                            PRs
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   </CardContent>

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Github, MessageSquare, User, Calendar, Tag, AlertCircle, Sparkles, GitMerge, GitBranch } from "lucide-react";
+import { ArrowLeft, Github, MessageSquare, User, Calendar, Tag, AlertCircle, Sparkles, GitMerge, GitBranch, TrendingUp, Loader2, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -59,6 +59,8 @@ function PRsList() {
   const [aiAnalysis, setAiAnalysis] = useState(false);
   const [autoMerge, setAutoMerge] = useState(false);
   const [codeRabbitInstalled, setCodeRabbitInstalled] = useState<boolean | null>(null);
+  const [analyzingPRs, setAnalyzingPRs] = useState<Set<number>>(new Set());
+  const [prScores, setPrScores] = useState<Map<number, { score: number; reasoning: string; recommendations: string[] }>>(new Map());
   const API_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
 
   useEffect(() => {
@@ -141,6 +143,46 @@ function PRsList() {
     
     checkCodeRabbit();
   }, [owner, repo, navigate, API_URL]);
+  
+  async function handleAnalyzePR(pr: PullRequest) {
+    setAnalyzingPRs(new Set(analyzingPRs).add(pr.number));
+    
+    try {
+      const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/pull-requests/${pr.number}/analyze`, {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error("Failed to analyze PR");
+      }
+      
+      const data = await response.json();
+      const newScores = new Map(prScores);
+      newScores.set(pr.number, {
+        score: data.score,
+        reasoning: data.reasoning,
+        recommendations: data.recommendations || [],
+      });
+      setPrScores(newScores);
+      
+      toast.success("PR Analysis Complete", {
+        description: `Merge readiness score: ${data.score}/100`,
+      });
+    } catch (error) {
+      console.error("Error analyzing PR:", error);
+      toast.error("Failed to Analyze PR", {
+        description: error instanceof Error ? error.message : "Please try again later.",
+      });
+    } finally {
+      const newAnalyzing = new Set(analyzingPRs);
+      newAnalyzing.delete(pr.number);
+      setAnalyzingPRs(newAnalyzing);
+    }
+  }
   
   async function handleAutomate(pr: PullRequest) {
     if (codeRabbitInstalled === false) {
@@ -296,7 +338,7 @@ function PRsList() {
             <>
               <div className="mb-6">
                 <p className="text-sm text-muted-foreground">
-                  Showing {pullRequests.length} open pull request{pullRequests.length !== 1 ? "s" : ""} - Use AI to automatically analyze CodeRabbit comments and merge PRs when ready
+                  Showing {pullRequests.length} open pull request{pullRequests.length !== 1 ? "s" : ""} - Use Cline AI to analyze PRs and get merge readiness scores (0-100)
                 </p>
               </div>
               <div className="space-y-4">
@@ -369,6 +411,82 @@ function PRsList() {
                           <span>+{pr.additions} / -{pr.deletions}</span>
                         </div>
                       </div>
+                      {prScores.has(pr.number) && (
+                        <Card className="mb-4 border-2 overflow-hidden">
+                          <CardContent className="p-0">
+                            <div className={`relative p-6 ${
+                              prScores.get(pr.number)!.score >= 70 
+                                ? "bg-gradient-to-br from-green-500/20 to-green-600/10 border-green-500/30" 
+                                : prScores.get(pr.number)!.score >= 50 
+                                ? "bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border-yellow-500/30" 
+                                : "bg-gradient-to-br from-red-500/20 to-red-600/10 border-red-500/30"
+                            }`}>
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-3">
+                                    <TrendingUp className={`w-6 h-6 ${
+                                      prScores.get(pr.number)!.score >= 70 
+                                        ? "text-green-500" 
+                                        : prScores.get(pr.number)!.score >= 50 
+                                        ? "text-yellow-500" 
+                                        : "text-red-500"
+                                    }`} />
+                                    <h3 className="text-lg font-bold">AI Analysis Result</h3>
+                                  </div>
+                                  <div className="mb-3">
+                                    <p className="text-sm font-medium text-muted-foreground mb-1">Merge Readiness Score</p>
+                                    <div className="flex items-baseline gap-2">
+                                      <span className={`text-6xl font-extrabold leading-none ${
+                                        prScores.get(pr.number)!.score >= 70 
+                                          ? "text-green-500" 
+                                          : prScores.get(pr.number)!.score >= 50 
+                                          ? "text-yellow-500" 
+                                          : "text-red-500"
+                                      }`}>
+                                        {prScores.get(pr.number)!.score}
+                                      </span>
+                                      <span className="text-2xl font-semibold text-muted-foreground">/100</span>
+                                    </div>
+                                  </div>
+                                  <div className="mt-4 p-3 rounded-lg bg-background/50 backdrop-blur-sm">
+                                    <p className="text-sm font-medium text-foreground leading-relaxed">
+                                      {prScores.get(pr.number)!.reasoning}
+                                    </p>
+                                  </div>
+                                  {prScores.get(pr.number)!.recommendations.length > 0 && (
+                                    <div className="mt-4 p-3 rounded-lg bg-background/50 backdrop-blur-sm">
+                                      <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-wide">Recommendations</p>
+                                      <ul className="text-sm text-foreground space-y-1.5">
+                                        {prScores.get(pr.number)!.recommendations.map((rec, idx) => (
+                                          <li key={idx} className="flex items-start gap-2">
+                                            <span className="text-primary mt-1">•</span>
+                                            <span>{rec}</span>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </div>
+                                  )}
+                                </div>
+                                <div className={`flex-shrink-0 w-20 h-20 rounded-full flex items-center justify-center ${
+                                  prScores.get(pr.number)!.score >= 70 
+                                    ? "bg-green-500/20" 
+                                    : prScores.get(pr.number)!.score >= 50 
+                                    ? "bg-yellow-500/20" 
+                                    : "bg-red-500/20"
+                                }`}>
+                                  {prScores.get(pr.number)!.score >= 70 ? (
+                                    <CheckCircle2 className="w-10 h-10 text-green-500" />
+                                  ) : prScores.get(pr.number)!.score >= 50 ? (
+                                    <AlertCircle className="w-10 h-10 text-yellow-500" />
+                                  ) : (
+                                    <AlertCircle className="w-10 h-10 text-red-500" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )}
                       <div className="flex items-center justify-between pt-4 border-t border-border">
                         <div className="text-sm text-muted-foreground">
                           <span className="font-medium">Status:</span> {pr.state === "open" ? "Open" : pr.merged_at ? "Merged" : "Closed"}
@@ -380,6 +498,34 @@ function PRsList() {
                           >
                             View on GitHub
                           </Button>
+                          {!prScores.has(pr.number) && (
+                            <Button
+                              onClick={() => handleAnalyzePR(pr)}
+                              disabled={analyzingPRs.has(pr.number)}
+                              variant="outline"
+                            >
+                              {analyzingPRs.has(pr.number) ? (
+                                <>
+                                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                                  Analyzing...
+                                </>
+                              ) : (
+                                <>
+                                  <TrendingUp className="w-4 h-4 mr-2" />
+                                  Analyze PR
+                                </>
+                              )}
+                            </Button>
+                          )}
+                          {prScores.has(pr.number) && prScores.get(pr.number)!.score >= 70 && (
+                            <Button
+                              onClick={() => window.open(pr.html_url, "_blank")}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              <GitMerge className="w-4 h-4 mr-2" />
+                              Merge PR
+                            </Button>
+                          )}
                           {automatedPRs.has(pr.number) ? (
                             <Button disabled variant="outline">
                               <Sparkles className="w-4 h-4 mr-2" />
