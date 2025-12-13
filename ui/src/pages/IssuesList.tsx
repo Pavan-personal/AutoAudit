@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Github, MessageSquare, User, Calendar, Tag, AlertCircle, Sparkles } from "lucide-react";
+import { ArrowLeft, Github, MessageSquare, User, Calendar, Tag, AlertCircle, Sparkles, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -221,8 +221,21 @@ function IssuesList() {
                   Showing {issues.length} open issue{issues.length !== 1 ? "s" : ""} - Use AI to automatically analyze and assign issues to the right team members
                 </p>
               </div>
-              <div className="space-y-4">
-                {issues.map((issue) => (
+              
+              {(() => {
+                const automated = issues.filter(issue => automatedIssues.has(issue.number));
+                const other = issues.filter(issue => !automatedIssues.has(issue.number));
+                
+                return (
+                  <div className="space-y-8">
+                    {automated.length > 0 && (
+                      <div>
+                        <h2 className="text-2xl font-bold mb-4 flex items-center gap-2">
+                          <CheckCircle2 className="w-6 h-6 text-primary" />
+                          Automated Issues
+                        </h2>
+                        <div className="space-y-4">
+                          {automated.map((issue) => (
                   <Card key={issue.id} className="glass-card-hover">
                     <CardHeader>
                       <div className="flex items-start justify-between">
@@ -308,8 +321,8 @@ function IssuesList() {
                             View on GitHub
                           </Button>
                           {automatedIssues.has(issue.number) ? (
-                            <Button disabled variant="outline">
-                              <Sparkles className="w-4 h-4 mr-2" />
+                            <Button disabled className="bg-primary/20 text-primary border-primary/50 cursor-not-allowed opacity-100">
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
                               Automated
                             </Button>
                           ) : (
@@ -322,8 +335,122 @@ function IssuesList() {
                       </div>
                     </CardContent>
                   </Card>
-                ))}
-              </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {other.length > 0 && (
+                      <div>
+                        <h2 className="text-2xl font-bold mb-4">Other Issues</h2>
+                        <div className="space-y-4">
+                          {other.map((issue) => (
+                  <Card key={issue.id} className="glass-card-hover">
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Github className="w-4 h-4 text-muted-foreground" />
+                            <CardTitle className="text-lg">
+                              <a
+                                href={issue.html_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:underline"
+                              >
+                                #{issue.number}: {issue.title}
+                              </a>
+                            </CardTitle>
+                          </div>
+                          <CardDescription className="mt-2 line-clamp-2">
+                            {issue.body || "No description provided"}
+                          </CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap items-center gap-4 mb-4">
+                        {issue.labels.length > 0 && (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Tag className="w-4 h-4 text-muted-foreground" />
+                            {issue.labels.map((label) => (
+                              <Badge
+                                key={label.name}
+                                variant="outline"
+                                style={{
+                                  borderColor: `#${label.color}`,
+                                  color: `#${label.color}`,
+                                }}
+                              >
+                                {label.name}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <MessageSquare className="w-4 h-4" />
+                          <span>{issue.comments} comment{issue.comments !== 1 ? "s" : ""}</span>
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Calendar className="w-4 h-4" />
+                          <span>Updated {new Date(issue.updated_at).toLocaleDateString()}</span>
+                        </div>
+                        {issue.user && (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <User className="w-4 h-4" />
+                            <span>by {issue.user.login}</span>
+                          </div>
+                        )}
+                        {issue.assignees.length > 0 && (
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">Assigned to:</span>
+                            <div className="flex items-center gap-1">
+                              {issue.assignees.map((assignee, idx) => (
+                                <img
+                                  key={idx}
+                                  src={assignee.avatar_url}
+                                  alt={assignee.login}
+                                  className="w-6 h-6 rounded-full border border-border"
+                                  title={assignee.login}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-between pt-4 border-t border-border">
+                        <div className="text-sm text-muted-foreground">
+                          <span className="font-medium">Status:</span> {issue.state === "open" ? "Open" : "Closed"}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            onClick={() => window.open(issue.html_url, "_blank")}
+                          >
+                            View on GitHub
+                          </Button>
+                          {automatedIssues.has(issue.number) ? (
+                            <Button disabled className="bg-primary/20 text-primary border-primary/50 cursor-not-allowed opacity-100">
+                              <CheckCircle2 className="w-4 h-4 mr-2" />
+                              Automated
+                            </Button>
+                          ) : (
+                            <Button onClick={() => handleAutomate(issue)}>
+                              <Sparkles className="w-4 h-4 mr-2" />
+                              Automate
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
             </>
           )}
         </div>
@@ -341,21 +468,12 @@ function IssuesList() {
           <div className="py-4 space-y-4">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0 pt-0.5">
-                <input
-                  type="checkbox"
-                  id="autoAssign"
-                  checked={true}
-                  disabled
-                  className="w-6 h-6 rounded border-2 border-primary bg-primary text-primary-foreground focus:ring-2 focus:ring-primary focus:ring-offset-2 cursor-not-allowed"
-                  style={{ 
-                    accentColor: 'hsl(var(--primary))',
-                    backgroundColor: 'hsl(var(--primary))',
-                    borderColor: 'hsl(var(--primary))'
-                  }}
-                />
+                <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
+                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                </div>
               </div>
               <div className="flex-1">
-                <label htmlFor="autoAssign" className="text-sm font-medium leading-none cursor-not-allowed">
+                <label className="text-sm font-medium leading-none">
                   AI-Powered Auto-Assignment Enabled
                 </label>
                 <p className="text-xs text-muted-foreground mt-2">
