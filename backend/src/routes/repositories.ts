@@ -157,7 +157,8 @@ async function getGitHubToken(req: Request): Promise<string | null> {
   return user?.githubToken || null;
 }
 
-async function executeCline(prompt: string, workingDir?: string, timeout: number = 300000): Promise<{ stdout: string; stderr: string }> {
+async function executeCline(prompt: string, _workingDir?: string, timeout: number = 300000): Promise<{ stdout: string; stderr: string }> {
+  // Note: workingDir parameter kept for API compatibility but not used (direct API calls don't need it)
   try {
     const apiKey = VERCEL_AI_GATEWAY_API_KEY || OPENAI_API_KEY;
     const baseURL = VERCEL_AI_GATEWAY_API_KEY 
