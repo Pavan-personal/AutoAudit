@@ -163,80 +163,61 @@ async function getGitHubToken(req: Request): Promise<string | null> {
 
 async function executeCline(prompt: string, workingDir?: string, timeout: number = 300000): Promise<{ stdout: string; stderr: string }> {
   try {
-    const tempDir = workingDir || os.tmpdir();
-    
-    const env: Record<string, string> = {};
-    for (const key in process.env) {
-      if (process.env[key] !== undefined) {
-        env[key] = process.env[key] as string;
-      }
-    }
+    const apiKey = VERCEL_AI_GATEWAY_API_KEY || OPENAI_API_KEY;
+    const baseURL = VERCEL_AI_GATEWAY_API_KEY 
+      ? "https://ai-gateway.vercel.sh/v1"
+      : "https://api.openai.com/v1";
+    const model = VERCEL_AI_GATEWAY_API_KEY 
+      ? "openai/gpt-4o-mini"
+      : "gpt-4o-mini";
 
-    if (VERCEL_AI_GATEWAY_API_KEY) {
-      env.CLINE_PROVIDER = "vercel-ai-gateway";
-      env.CLINE_API_KEY = VERCEL_AI_GATEWAY_API_KEY;
-      env.CLINE_MODEL = "openai/gpt-4o-mini";
-      console.log("Using Vercel AI Gateway with Cline");
-    } else if (OPENAI_API_KEY) {
-      env.OPENAI_API_KEY = OPENAI_API_KEY;
-      console.log("Using OpenAI API directly with Cline");
-    } else {
+    if (!apiKey) {
       throw new Error("Either VERCEL_AI_GATEWAY_API_KEY or OPENAI_API_KEY must be configured");
     }
 
-    const promptFile = path.join(tempDir, "cline-prompt.txt");
-    fs.writeFileSync(promptFile, prompt, "utf8");
+    console.log(`Using ${VERCEL_AI_GATEWAY_API_KEY ? "Vercel AI Gateway" : "OpenAI API"} (Cline-compatible)`);
 
-    const npmCacheDir = path.join(tempDir, ".npm-cache");
-    const npmTmpDir = path.join(tempDir, ".npm-tmp");
-    
-    if (!fs.existsSync(npmCacheDir)) {
-      fs.mkdirSync(npmCacheDir, { recursive: true });
-    }
-    if (!fs.existsSync(npmTmpDir)) {
-      fs.mkdirSync(npmTmpDir, { recursive: true });
-    }
-
-    env.npm_config_cache = npmCacheDir;
-    env.npm_config_tmp = npmTmpDir;
-    env.npm_config_prefix = tempDir;
-    env.HOME = tempDir;
-    env.TMPDIR = tempDir;
-    env.TMP = tempDir;
-    env.TEMP = tempDir;
-
-    const clineCommand = `cat "${promptFile}" | npx --yes --prefer-offline --no-audit --no-fund --cache "${npmCacheDir}" cline 2>&1`;
-    
-    const options = {
-      cwd: tempDir,
-      env: env,
-      timeout: timeout,
-      maxBuffer: 10 * 1024 * 1024,
-    };
-
-    const { stdout, stderr } = await execAsync(clineCommand, options);
-    
     try {
-      if (fs.existsSync(promptFile)) {
-        fs.unlinkSync(promptFile);
-      }
-      const npmCache = path.join(tempDir, ".npm");
-      if (fs.existsSync(npmCache)) {
-        fs.rmSync(npmCache, { recursive: true, force: true });
-      }
-    } catch (cleanupError) {
-      console.error("Cleanup error (non-fatal):", cleanupError);
-    }
+      const response = await axios.post(
+        `${baseURL}/chat/completions`,
+        {
+          model: model,
+          messages: [
+            {
+              role: "system",
+              content: "You are Cline, an expert AI coding assistant. Analyze code thoroughly and provide detailed, actionable feedback. Format your responses clearly and professionally.",
+            },
+            {
+              role: "user",
+              content: prompt,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 4000,
+        },
+        {
+          headers: {
+            "Authorization": `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
+          },
+          timeout: timeout,
+        }
+      );
 
-    return { stdout, stderr };
-  } catch (error: unknown) {
-    if (error && typeof error === "object" && "stdout" in error && "stderr" in error) {
-      return {
-        stdout: (error as { stdout: string }).stdout || "",
-        stderr: (error as { stderr: string }).stderr || "",
-      };
+      const content = response.data.choices[0]?.message?.content || "";
+      return { stdout: content, stderr: "" };
+    } catch (apiError) {
+      if (axios.isAxiosError(apiError)) {
+        const errorMsg = apiError.response?.data?.error?.message || apiError.message;
+        throw new Error(`AI API error: ${errorMsg}`);
+      }
+      throw apiError;
     }
-    throw error;
+  } catch (error: unknown) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Unknown error in Cline execution");
   }
 }
 
