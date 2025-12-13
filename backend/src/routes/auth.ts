@@ -42,72 +42,6 @@ router.get("/github", async (_req: Request, res: Response) => {
   }
 });
 
-router.get("/github/install/callback", async (req: Request, res: Response) => {
-  try {
-    const { installation_id, state } = req.query;
-    
-    if (!installation_id) {
-      res.setHeader("Content-Type", "text/html");
-      res.send(`
-        <!DOCTYPE html>
-        <html>
-          <head><title>Error</title></head>
-          <body>
-            <script>window.location.href = ${JSON.stringify(`${FRONTEND_URL}?error=missing_installation`)};</script>
-            <p>Redirecting...</p>
-          </body>
-        </html>
-      `);
-      return;
-    }
-
-    if (state && typeof state === "string") {
-      const oauthState = await prisma.oAuthState.findUnique({
-        where: { state: state as string },
-      });
-
-      if (oauthState) {
-        const user = await prisma.user.findFirst({
-          where: { githubToken: { not: null } },
-          orderBy: { createdAt: "desc" },
-        });
-
-        if (user) {
-          await prisma.user.update({
-            where: { id: user.id },
-            data: { appInstalled: true },
-          });
-        }
-      }
-    }
-
-    res.setHeader("Content-Type", "text/html");
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head><title>Installation Complete</title></head>
-        <body>
-          <script>window.location.href = ${JSON.stringify(`${FRONTEND_URL}/dashboard`)};</script>
-          <p>Redirecting to dashboard...</p>
-        </body>
-      </html>
-    `);
-  } catch (error) {
-    console.error("Installation callback error:", error);
-    res.setHeader("Content-Type", "text/html");
-    res.send(`
-      <!DOCTYPE html>
-      <html>
-        <head><title>Error</title></head>
-        <body>
-          <script>window.location.href = ${JSON.stringify(`${FRONTEND_URL}?error=install_failed`)};</script>
-          <p>Redirecting...</p>
-        </body>
-      </html>
-    `);
-  }
-});
-
 router.get("/github/callback", async (req: Request, res: Response) => {
   try {
     const { code, state } = req.query;
@@ -337,10 +271,11 @@ router.get("/github/callback", async (req: Request, res: Response) => {
       path: "/",
     });
     
-    if (!appInstalled && GITHUB_APP_ID) {
+    if (!appInstalled && GITHUB_APP_ID && isUserAccessToken) {
       const appSlug = GITHUB_CLIENT_ID?.split(".")[0] || "autoauditai";
       const installUrl = `https://github.com/apps/${appSlug}/installations/new?state=${state}`;
       console.log("App not installed, redirecting to installation:", installUrl);
+      console.log("Note: After installation, GitHub will redirect back to OAuth callback");
       res.redirect(302, installUrl);
       return;
     }
@@ -350,6 +285,7 @@ router.get("/github/callback", async (req: Request, res: Response) => {
     console.log("Frontend URL:", FRONTEND_URL);
     console.log("Redirect URL:", redirectUrl);
     console.log("App installed:", appInstalled);
+    console.log("Token type:", isUserAccessToken ? "GitHub App (ghu_)" : "OAuth");
     console.log("====================");
     
     res.redirect(302, redirectUrl);
