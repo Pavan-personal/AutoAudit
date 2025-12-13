@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, File, Check, Loader2 } from "lucide-react";
+import { ArrowLeft, File, Folder, ChevronRight, ChevronDown, Check, Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -19,15 +19,63 @@ interface SelectedFile {
   content: string;
 }
 
+interface TreeNode {
+  item: FileItem;
+  children: TreeNode[];
+  expanded: boolean;
+}
+
 function FileSelection() {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
-  const [files, setFiles] = useState<FileItem[]>([]);
+  const [items, setItems] = useState<FileItem[]>([]);
+  const [tree, setTree] = useState<TreeNode[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [currentPath, setCurrentPath] = useState<string>("");
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
+  const OUMI_API_URL = import.meta.env.VITE_OUMI_API_URL || "https://pavannnnnnn-autoaudi-ai-oumi.hf.space/api/analyze";
+
+  const fetchContents = useCallback(async (path: string) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const url = path
+        ? `${API_URL}/api/repositories/${owner}/${repo}/contents?path=${encodeURIComponent(path)}`
+        : `${API_URL}/api/repositories/${owner}/${repo}/contents`;
+
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setItems(data.items || []);
+
+      const treeNodes: TreeNode[] = (data.items || []).map((item: FileItem) => ({
+        item,
+        children: [],
+        expanded: false,
+      }));
+
+      setTree(treeNodes);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching contents:", error);
+      setLoading(false);
+      setError("Failed to load contents");
+    }
+  }, [owner, repo, API_URL]);
 
   useEffect(() => {
     if (!owner || !repo) {
@@ -35,35 +83,61 @@ function FileSelection() {
       return;
     }
 
-    async function fetchFiles() {
-      try {
-        const response = await fetch(
-          `${API_URL}/api/repositories/${owner}/${repo}/contents`,
-          {
-            method: "GET",
-            credentials: "include",
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        );
+    fetchContents(currentPath);
+  }, [owner, repo, currentPath, navigate, fetchContents]);
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
 
-        const data = await response.json();
-        setFiles(data.files || []);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching files:", error);
-        setLoading(false);
-        setError("Failed to load files");
+  function updateTree(nodes: TreeNode[], targetPath: string, updater: (node: TreeNode) => TreeNode): TreeNode[] {
+    return nodes.map((node) => {
+      if (node.item.path === targetPath) {
+        return updater(node);
       }
+      if (node.children.length > 0) {
+        return {
+          ...node,
+          children: updateTree(node.children, targetPath, updater),
+        };
+      }
+      return node;
+    });
+  }
+
+  async function fetchFolderContents(path: string, node: TreeNode) {
+    if (node.children.length > 0) {
+      setTree((prev) =>
+        updateTree(prev, node.item.path, (n) => ({ ...n, expanded: !n.expanded }))
+      );
+      return;
     }
 
-    fetchFiles();
-  }, [owner, repo, navigate, API_URL]);
+    try {
+      const url = `${API_URL}/api/repositories/${owner}/${repo}/contents?path=${encodeURIComponent(path)}`;
+      const response = await fetch(url, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const children: TreeNode[] = (data.items || []).map((item: FileItem) => ({
+        item,
+        children: [],
+        expanded: false,
+      }));
+
+      setTree((prev) =>
+        updateTree(prev, node.item.path, (n) => ({ ...n, children, expanded: true }))
+      );
+    } catch (error) {
+      console.error("Error fetching folder contents:", error);
+    }
+  }
 
   function toggleFile(path: string) {
     const newSelected = new Set(selectedFiles);
@@ -112,19 +186,27 @@ function FileSelection() {
         });
       }
 
-      const analysisResponse = await fetch(`${API_URL}/api/repositories/analyze`, {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 300000);
+
+      const analysisResponse = await fetch(OUMI_API_URL, {
         method: "POST",
-        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          files: fileContents,
+          files: fileContents.map((file) => ({
+            path: file.path,
+            content: file.content,
+          })),
           options: {
             type: ["bugs", "security"],
           },
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!analysisResponse.ok) {
         throw new Error("Failed to analyze files");
@@ -136,17 +218,92 @@ function FileSelection() {
       });
     } catch (error) {
       console.error("Error analyzing files:", error);
-      setError("Failed to analyze files. Please try again.");
+      if (error instanceof Error && error.name === "AbortError") {
+        setError("Analysis timed out. Please try with fewer files.");
+      } else {
+        setError("Failed to analyze files. Please try again.");
+      }
       setAnalyzing(false);
     }
   }
 
-  if (loading) {
+  function renderTree(nodes: TreeNode[], level = 0): JSX.Element[] {
+    return nodes.map((node) => {
+      const isFile = node.item.type === "file";
+      const isSelected = selectedFiles.has(node.item.path);
+      const isDisabled = !isSelected && selectedFiles.size >= 5;
+
+      return (
+        <div key={node.item.path}>
+          <Card
+            className={`cursor-pointer transition-all ${
+              isSelected
+                ? "border-primary bg-secondary/50"
+                : isDisabled
+                ? "opacity-50"
+                : "hover:border-border"
+            }`}
+            onClick={() => {
+              if (isFile) {
+                if (!isDisabled) {
+                  toggleFile(node.item.path);
+                }
+              } else {
+                fetchFolderContents(node.item.path, node);
+              }
+            }}
+          >
+            <CardContent className="p-4">
+              <div className="flex items-center gap-4" style={{ paddingLeft: `${level * 20}px` }}>
+                {isFile ? (
+                  <>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => !isDisabled && toggleFile(node.item.path)}
+                      disabled={isDisabled}
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                    <File className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  </>
+                ) : (
+                  <>
+                    <div className="w-5 h-5 flex-shrink-0" />
+                    {node.expanded ? (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                    )}
+                    <Folder className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  </>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium truncate">{node.item.name}</p>
+                  {isFile && (
+                    <p className="text-sm text-muted-foreground truncate">
+                      {node.item.path}
+                    </p>
+                  )}
+                </div>
+                {isFile && isSelected && (
+                  <Check className="w-5 h-5 text-primary flex-shrink-0" />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          {!isFile && node.expanded && node.children.length > 0 && (
+            <div className="ml-4">{renderTree(node.children, level + 1)}</div>
+          )}
+        </div>
+      );
+    });
+  }
+
+  if (loading && tree.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-          <p className="text-muted-foreground">Loading files...</p>
+          <p className="text-muted-foreground">Loading contents...</p>
         </div>
       </div>
     );
@@ -182,54 +339,17 @@ function FileSelection() {
             </Card>
           )}
 
-          {files.length === 0 ? (
+          {tree.length === 0 ? (
             <Card>
               <CardContent className="py-12 text-center">
                 <File className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">No files found in this repository</p>
+                <p className="text-muted-foreground">No contents found in this repository</p>
               </CardContent>
             </Card>
           ) : (
             <>
-              <div className="space-y-2 mb-6">
-                {files.map((file) => {
-                  const isSelected = selectedFiles.has(file.path);
-                  const isDisabled = !isSelected && selectedFiles.size >= 5;
-
-                  return (
-                    <Card
-                      key={file.path}
-                      className={`cursor-pointer transition-all ${
-                        isSelected
-                          ? "border-primary bg-secondary/50"
-                          : isDisabled
-                          ? "opacity-50"
-                          : "hover:border-border"
-                      }`}
-                      onClick={() => !isDisabled && toggleFile(file.path)}
-                    >
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-4">
-                          <Checkbox
-                            checked={isSelected}
-                            onCheckedChange={() => !isDisabled && toggleFile(file.path)}
-                            disabled={isDisabled}
-                          />
-                          <File className="w-5 h-5 text-muted-foreground" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">{file.name}</p>
-                            <p className="text-sm text-muted-foreground truncate">
-                              {file.path}
-                            </p>
-                          </div>
-                          {isSelected && (
-                            <Check className="w-5 h-5 text-primary" />
-                          )}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
+              <div className="space-y-2 mb-6 max-h-[60vh] overflow-y-auto">
+                {renderTree(tree)}
               </div>
 
               <div className="flex items-center justify-between">

@@ -101,11 +101,9 @@ router.get("/:owner/:repo/contents", async (req: Request, res: Response) => {
       },
     });
 
-    const files = Array.isArray(response.data)
-      ? response.data.filter((item: any) => item.type === "file")
-      : [response.data].filter((item: any) => item.type === "file");
+    const items = Array.isArray(response.data) ? response.data : [response.data];
 
-    res.json({ files });
+    res.json({ items });
   } catch (error: unknown) {
     console.error("Error fetching repository contents:", error);
     if (axios.isAxiosError(error)) {
@@ -156,53 +154,6 @@ router.get("/:owner/:repo/contents/:path", async (req: Request, res: Response) =
   }
 });
 
-router.post("/analyze", async (req: Request, res: Response) => {
-  try {
-    const { files, options } = req.body;
-
-    if (!files || !Array.isArray(files) || files.length === 0) {
-      res.status(400).json({ error: "Files array is required" });
-      return;
-    }
-
-    if (files.length > 5) {
-      res.status(400).json({ error: "Maximum 5 files allowed" });
-      return;
-    }
-
-    const oumiApiUrl = process.env.OUMI_API_URL || "https://pavannnnnnn-autoaudi-ai-oumi.hf.space/api/analyze";
-
-    const response = await axios.post(
-      oumiApiUrl,
-      {
-        files: files.map((file: { path: string; content: string }) => ({
-          path: file.path,
-          content: file.content,
-        })),
-        options: options || {
-          type: ["bugs", "security"],
-        },
-      },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        timeout: 120000,
-      }
-    );
-
-    res.json(response.data);
-  } catch (error: unknown) {
-    console.error("Error calling Oumi API:", error);
-    if (axios.isAxiosError(error)) {
-      res.status(error.response?.status || 500).json({
-        error: error.response?.data?.message || "Failed to analyze code",
-      });
-    } else {
-      res.status(500).json({ error: "Internal server error" });
-    }
-  }
-});
 
 router.post("/:owner/:repo/issues", async (req: Request, res: Response) => {
   try {
