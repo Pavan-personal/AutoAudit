@@ -307,9 +307,9 @@ function PRsList() {
                 <div className="flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 text-yellow-500 mt-0.5" />
                   <div className="flex-1">
-                    <p className="font-medium text-yellow-500 mb-1">CodeRabbit Installation Required</p>
+                    <p className="font-medium text-yellow-500 mb-1">Install CodeRabbit for Better PR Reviews</p>
                     <p className="text-sm text-muted-foreground mb-3">
-                      To use PR automation features, you need to install CodeRabbit in your repository. CodeRabbit provides AI-powered code review comments that our system uses to make intelligent merge decisions.
+                      Use CodeRabbit to have better code reviews and get summary of data. While reviewing PRs, we'll use CodeRabbit comments, checks, comments, and all diff to give the final verdict on merge readiness.
                     </p>
                     <Button
                       variant="outline"
@@ -526,17 +526,11 @@ function PRsList() {
                               Merge PR
                             </Button>
                           )}
-                          {automatedPRs.has(pr.number) ? (
-                            <Button disabled variant="outline">
+                          <Button disabled variant="outline" title="Coming Soon">
                               <Sparkles className="w-4 h-4 mr-2" />
-                              Automated
+                              Automate PR
+                              <span className="ml-2 text-xs opacity-70">(Coming Soon)</span>
                             </Button>
-                          ) : (
-                            <Button onClick={() => handleAutomate(pr)} disabled={codeRabbitInstalled === false}>
-                              <Sparkles className="w-4 h-4 mr-2" />
-                              Automate
-                            </Button>
-                          )}
                         </div>
                       </div>
                     </CardContent>

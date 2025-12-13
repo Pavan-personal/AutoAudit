@@ -159,10 +159,9 @@ async function getGitHubToken(req: Request): Promise<string | null> {
 
 async function executeCline(prompt: string, timeout: number = 300000): Promise<{ stdout: string; stderr: string }> {
   try {
-    // Prefer OpenAI API directly (more reliable, no credit card required)
-    // Only use Vercel AI Gateway if OpenAI API key is not available
-    const useVercelGateway = !OPENAI_API_KEY && VERCEL_AI_GATEWAY_API_KEY;
-    const apiKey = OPENAI_API_KEY || VERCEL_AI_GATEWAY_API_KEY;
+    // Prioritize Vercel AI Gateway, fallback to OpenAI API
+    const useVercelGateway = !!VERCEL_AI_GATEWAY_API_KEY;
+    const apiKey = VERCEL_AI_GATEWAY_API_KEY || OPENAI_API_KEY;
     const baseURL = useVercelGateway
       ? "https://ai-gateway.vercel.sh/v1"
       : "https://api.openai.com/v1";
@@ -171,7 +170,7 @@ async function executeCline(prompt: string, timeout: number = 300000): Promise<{
       : "gpt-4o-mini";
 
     if (!apiKey) {
-      throw new Error("Either OPENAI_API_KEY or VERCEL_AI_GATEWAY_API_KEY must be configured");
+      throw new Error("Either VERCEL_AI_GATEWAY_API_KEY or OPENAI_API_KEY must be configured");
     }
 
     console.log(`Using ${useVercelGateway ? "Vercel AI Gateway" : "OpenAI API"} (Cline-compatible)`);
@@ -209,9 +208,41 @@ async function executeCline(prompt: string, timeout: number = 300000): Promise<{
       if (axios.isAxiosError(apiError)) {
         const errorMsg = apiError.response?.data?.error?.message || apiError.message;
         
-        // If Vercel Gateway fails due to credit card requirement, suggest using OpenAI API
-        if (useVercelGateway && errorMsg.includes("credit card")) {
-          throw new Error(`Vercel AI Gateway requires a credit card. Please set OPENAI_API_KEY environment variable instead, or add a credit card to your Vercel account. Original error: ${errorMsg}`);
+        // If Vercel Gateway fails, try falling back to OpenAI API if available
+        if (useVercelGateway && OPENAI_API_KEY && (errorMsg.includes("credit card") || errorMsg.includes("401") || errorMsg.includes("403"))) {
+          console.log(`Vercel AI Gateway failed, falling back to OpenAI API: ${errorMsg}`);
+          try {
+            const fallbackResponse = await axios.post(
+              "https://api.openai.com/v1/chat/completions",
+              {
+                model: "gpt-4o-mini",
+                messages: [
+                  {
+                    role: "system",
+                    content: "You are Cline, an expert AI coding assistant. Analyze code thoroughly and provide detailed, actionable feedback. Format your responses clearly and professionally.",
+                  },
+                  {
+                    role: "user",
+                    content: prompt,
+                  },
+                ],
+                temperature: 0.7,
+                max_tokens: 4000,
+              },
+              {
+                headers: {
+                  "Authorization": `Bearer ${OPENAI_API_KEY}`,
+                  "Content-Type": "application/json",
+                },
+                timeout: timeout,
+              }
+            );
+            const content = fallbackResponse.data.choices[0]?.message?.content || "";
+            return { stdout: content, stderr: "" };
+          } catch (fallbackError) {
+            console.error("OpenAI API fallback also failed:", fallbackError);
+            throw new Error(`Both Vercel AI Gateway and OpenAI API failed. Gateway error: ${errorMsg}`);
+          }
         }
         
         throw new Error(`AI API error: ${errorMsg}`);

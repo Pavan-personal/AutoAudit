@@ -157,7 +157,7 @@ function Repositories() {
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
               {filteredRepos.map((repo) => (
-                <Card key={repo.id} className="glass-card-hover">
+                <Card key={repo.id} className="glass-card-hover h-fit">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -171,8 +171,8 @@ function Repositories() {
                       </CardDescription>
                     )}
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
+                  <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between text-sm text-muted-foreground">
                       <div className="flex items-center gap-4">
                         {repo.language && (
                           <span>{repo.language}</span>
@@ -183,48 +183,53 @@ function Repositories() {
                         {new Date(repo.updated_at).toLocaleDateString()}
                       </span>
                     </div>
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Code Audit</p>
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => handleAudit(repo, false)}
-                            variant="outline"
-                            className="flex-1 group hover:bg-primary/10 hover:border-primary/50 transition-all"
-                          >
-                            <Brain className="w-4 h-4 mr-2 group-hover:text-primary" />
-                            Oumi
-                          </Button>
-                          <Button
-                            onClick={() => handleAudit(repo, true)}
-                            variant="outline"
-                            className="flex-1 group hover:bg-primary/10 hover:border-primary/50 transition-all"
-                          >
-                            <Sparkles className="w-4 h-4 mr-2 group-hover:text-primary" />
-                            Cline
-                          </Button>
-                        </div>
-                        <p className="text-xs text-muted-foreground">
-                          AI-powered code analysis to detect issues and create GitHub issues automatically
-                        </p>
+                    
+                    <div className="space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Code Audit</p>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleAudit(repo, false)}
+                          variant="outline"
+                          className="flex-1 group hover:bg-primary/10 hover:border-primary/50 transition-all"
+                          size="sm"
+                        >
+                          <Brain className="w-4 h-4 mr-2 group-hover:text-primary" />
+                          Oumi
+                        </Button>
+                        <Button
+                          onClick={() => handleAudit(repo, true)}
+                          variant="outline"
+                          className="flex-1 group hover:bg-primary/10 hover:border-primary/50 transition-all"
+                          size="sm"
+                        >
+                          <Sparkles className="w-4 h-4 mr-2 group-hover:text-primary" />
+                          Cline
+                        </Button>
                       </div>
-                      <div className="pt-2 border-t border-border">
-                        <div className="flex gap-2">
-                          <Button
-                            onClick={() => navigate(`/repositories/${repo.full_name}/issues-list`)}
-                            variant="outline"
-                            className="flex-1"
-                          >
-                            Issues
-                          </Button>
-                          <Button
-                            onClick={() => navigate(`/repositories/${repo.full_name}/prs-list`)}
-                            variant="outline"
-                            className="flex-1"
-                          >
-                            PRs
-                          </Button>
-                        </div>
+                      <p className="text-xs text-muted-foreground">
+                        AI-powered code analysis to detect issues and create GitHub issues automatically
+                      </p>
+                    </div>
+                    
+                    <div className="pt-2 border-t border-border space-y-2">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Management</p>
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => navigate(`/repositories/${repo.full_name}/issues-list`)}
+                          variant="outline"
+                          className="flex-1"
+                          size="sm"
+                        >
+                          Automate Issues
+                        </Button>
+                        <Button
+                          onClick={() => navigate(`/repositories/${repo.full_name}/prs-list`)}
+                          variant="outline"
+                          className="flex-1"
+                          size="sm"
+                        >
+                          Review PRs
+                        </Button>
                       </div>
                     </div>
                   </CardContent>
