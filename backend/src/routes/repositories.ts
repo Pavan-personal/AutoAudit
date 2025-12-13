@@ -1621,18 +1621,35 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
       const promptFile = path.join(tempDir, "cline-prompt.txt");
       fs.writeFileSync(promptFile, prompt, "utf8");
       
-      const clineCommand = `cat "${promptFile}" | npx -y cline`;
+      const clineCommand = `cat "${promptFile}" | npx --yes --prefer-offline --no-audit --no-fund cline 2>&1`;
       
       console.log("Executing Cline analysis...");
       const { stdout, stderr } = await executeCline(clineCommand, tempDir, 600000);
 
-      if (stderr && !stdout) {
-        throw new Error(`Cline analysis failed: ${stderr}`);
+      const analysisOutput = stdout || stderr || "";
+      
+      if (!analysisOutput || analysisOutput.trim().length === 0) {
+        throw new Error("Cline analysis returned empty response - Cline may not have executed properly");
       }
 
-      const analysisResult = parseClineIssuesOutput(stdout || stderr || "", filesToAnalyze);
-      
-      res.json(analysisResult);
+      if (stderr && stderr.includes("npm error") && !stdout) {
+        throw new Error(`Cline installation failed: ${stderr.substring(0, 300)}. This is likely a disk space or npm configuration issue in the serverless environment.`);
+      }
+
+      try {
+        const analysisResult = parseClineIssuesOutput(analysisOutput, filesToAnalyze);
+        
+        if (analysisResult.summary.total_issues === 0 && analysisOutput.length > 100) {
+          console.warn("Cline returned output but parsed 0 issues - this may indicate a parsing issue or Cline didn't find issues");
+        }
+        
+        res.json(analysisResult);
+      } catch (parseError) {
+        if (parseError instanceof Error && parseError.message.includes("Cline execution failed")) {
+          throw parseError;
+        }
+        throw new Error(`Failed to parse Cline output: ${parseError instanceof Error ? parseError.message : "Unknown error"}. Raw output: ${analysisOutput.substring(0, 500)}`);
+      }
     } finally {
       try {
         fs.rmSync(tempDir, { recursive: true, force: true });
@@ -1841,17 +1858,30 @@ Format your response clearly with the score prominently displayed.`;
       const promptFile = path.join(tempDir, "cline-pr-prompt.txt");
       fs.writeFileSync(promptFile, analysisPrompt, "utf8");
       
-      const clineCommand = `cat "${promptFile}" | npx -y cline`;
+      const clineCommand = `cat "${promptFile}" | npx --yes --prefer-offline --no-audit --no-fund cline 2>&1`;
       
       console.log(`Executing Cline PR analysis for PR #${prNumber}...`);
       const { stdout, stderr } = await executeCline(clineCommand, tempDir, 300000);
 
-      if (stderr && !stdout) {
-        throw new Error(`Cline PR analysis failed: ${stderr}`);
+      const analysisOutput = stdout || stderr || "";
+      
+      if (!analysisOutput || analysisOutput.trim().length === 0) {
+        throw new Error("Cline PR analysis returned empty response - Cline may not have executed properly");
       }
 
-      const analysisOutput = stdout || stderr || "";
-      const scoreResult = parseClinePRScore(analysisOutput);
+      if (stderr && stderr.includes("npm error") && !stdout) {
+        throw new Error(`Cline installation failed: ${stderr.substring(0, 300)}. This is likely a disk space or npm configuration issue in the serverless environment.`);
+      }
+
+      let scoreResult;
+      try {
+        scoreResult = parseClinePRScore(analysisOutput);
+      } catch (parseError) {
+        if (parseError instanceof Error && parseError.message.includes("Cline execution failed")) {
+          throw parseError;
+        }
+        throw new Error(`Failed to parse Cline PR analysis: ${parseError instanceof Error ? parseError.message : "Unknown error"}. Raw output: ${analysisOutput.substring(0, 500)}`);
+      }
 
       res.json({
         prNumber: parseInt(prNumber),
