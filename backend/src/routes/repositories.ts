@@ -7,10 +7,114 @@ const router = express.Router();
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "your-jwt-secret-change-in-production";
 
+const GITHUB_APP_ID = process.env.GITHUB_APP_ID;
+const GITHUB_PRIVATE_KEY = process.env.GITHUB_PRIVATE_KEY;
+
 declare module "express-session" {
   interface SessionData {
     userId?: string;
     githubToken?: string;
+  }
+}
+
+function generateGitHubAppJWT(): string | null {
+  if (!GITHUB_APP_ID || !GITHUB_PRIVATE_KEY) {
+    console.error("GITHUB_APP_ID or GITHUB_PRIVATE_KEY not configured");
+    return null;
+  }
+
+  try {
+    const now = Math.floor(Date.now() / 1000);
+    const payload = {
+      iat: now - 60,
+      exp: now + 600,
+      iss: GITHUB_APP_ID,
+    };
+
+    const privateKey = GITHUB_PRIVATE_KEY.replace(/\\n/g, "\n");
+    const token = jwt.sign(payload, privateKey, { algorithm: "RS256" });
+    return token;
+  } catch (error) {
+    console.error("Error generating GitHub App JWT:", error);
+    return null;
+  }
+}
+
+async function getInstallationId(owner: string, repo?: string): Promise<number | null> {
+  if (!GITHUB_APP_ID || !GITHUB_PRIVATE_KEY) {
+    return null;
+  }
+
+  try {
+    const appJWT = generateGitHubAppJWT();
+    if (!appJWT) {
+      return null;
+    }
+
+    if (repo) {
+      try {
+        const repoResponse = await axios.get(`https://api.github.com/repos/${owner}/${repo}/installation`, {
+          headers: {
+            Accept: "application/vnd.github+json",
+            Authorization: `Bearer ${appJWT}`,
+            "X-GitHub-Api-Version": "2022-11-28",
+          },
+        });
+        return repoResponse.data.id || null;
+      } catch {
+        console.log(`No repository installation found for ${owner}/${repo}, trying user installation`);
+      }
+    }
+
+    const userResponse = await axios.get(`https://api.github.com/users/${owner}/installation`, {
+      headers: {
+        Accept: "application/vnd.github+json",
+        Authorization: `Bearer ${appJWT}`,
+        "X-GitHub-Api-Version": "2022-11-28",
+      },
+    });
+
+    return userResponse.data.id || null;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      console.log(`No installation found for ${owner}`);
+    } else {
+      console.error("Error getting installation ID:", error);
+    }
+    return null;
+  }
+}
+
+async function generateInstallationToken(installationId: number): Promise<string | null> {
+  if (!GITHUB_APP_ID || !GITHUB_PRIVATE_KEY) {
+    return null;
+  }
+
+  try {
+    const appJWT = generateGitHubAppJWT();
+    if (!appJWT) {
+      return null;
+    }
+
+    const response = await axios.post(
+      `https://api.github.com/app/installations/${installationId}/access_tokens`,
+      {},
+      {
+        headers: {
+          Accept: "application/vnd.github+json",
+          Authorization: `Bearer ${appJWT}`,
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      }
+    );
+
+    return response.data.token || null;
+  } catch (error) {
+    console.error("Error generating installation token:", error);
+    if (axios.isAxiosError(error)) {
+      console.error("Response:", error.response?.data);
+    }
+    return null;
   }
 }
 
@@ -175,12 +279,6 @@ router.get("/:owner/:repo/contents/:path", async (req: Request, res: Response) =
 
 router.post("/:owner/:repo/issues", async (req: Request, res: Response) => {
   try {
-    const token = await getGitHubToken(req);
-    if (!token) {
-      res.status(401).json({ error: "Not authenticated" });
-      return;
-    }
-
     const { owner, repo } = req.params;
     const { title, body, labels } = req.body;
 
@@ -189,14 +287,63 @@ router.post("/:owner/:repo/issues", async (req: Request, res: Response) => {
       return;
     }
 
-    const isUserAccessToken = token.startsWith("ghu_");
-    const authHeader = isUserAccessToken ? `Bearer ${token}` : `token ${token}`;
-    
-    console.log("=== CREATING GITHUB ISSUE ===");
-    console.log("Token type:", isUserAccessToken ? "GitHub App user access token (ghu_)" : "OAuth token");
-    console.log("Using auth header:", authHeader.substring(0, 20) + "...");
-    console.log("Repository:", `${owner}/${repo}`);
-    console.log("=============================");
+    let authHeader: string;
+    let tokenType: string;
+
+    if (GITHUB_APP_ID && GITHUB_PRIVATE_KEY) {
+      const installationId = await getInstallationId(owner, repo);
+      
+      if (installationId) {
+        const installationToken = await generateInstallationToken(installationId);
+        if (installationToken) {
+          authHeader = `Bearer ${installationToken}`;
+          tokenType = "GitHub App installation access token (ghs_)";
+          console.log("=== CREATING GITHUB ISSUE ===");
+          console.log("Token type:", tokenType);
+          console.log("Using installation token for:", `${owner}/${repo}`);
+          console.log("=============================");
+        } else {
+          const userToken = await getGitHubToken(req);
+          if (!userToken) {
+            res.status(401).json({ error: "Not authenticated and failed to generate installation token" });
+            return;
+          }
+          const isUserAccessToken = userToken.startsWith("ghu_");
+          authHeader = isUserAccessToken ? `Bearer ${userToken}` : `token ${userToken}`;
+          tokenType = isUserAccessToken ? "GitHub App user access token (ghu_)" : "OAuth token";
+          console.log("=== CREATING GITHUB ISSUE ===");
+          console.log("Token type:", tokenType, "(fallback - installation token generation failed)");
+          console.log("Repository:", `${owner}/${repo}`);
+          console.log("=============================");
+        }
+      } else {
+        const userToken = await getGitHubToken(req);
+        if (!userToken) {
+          res.status(401).json({ error: "Not authenticated and app not installed" });
+          return;
+        }
+        const isUserAccessToken = userToken.startsWith("ghu_");
+        authHeader = isUserAccessToken ? `Bearer ${userToken}` : `token ${userToken}`;
+        tokenType = isUserAccessToken ? "GitHub App user access token (ghu_)" : "OAuth token";
+        console.log("=== CREATING GITHUB ISSUE ===");
+        console.log("Token type:", tokenType, "(fallback - no installation found)");
+        console.log("Repository:", `${owner}/${repo}`);
+        console.log("=============================");
+      }
+    } else {
+      const userToken = await getGitHubToken(req);
+      if (!userToken) {
+        res.status(401).json({ error: "Not authenticated" });
+        return;
+      }
+      const isUserAccessToken = userToken.startsWith("ghu_");
+      authHeader = isUserAccessToken ? `Bearer ${userToken}` : `token ${userToken}`;
+      tokenType = isUserAccessToken ? "GitHub App user access token (ghu_)" : "OAuth token";
+      console.log("=== CREATING GITHUB ISSUE ===");
+      console.log("Token type:", tokenType);
+      console.log("Repository:", `${owner}/${repo}`);
+      console.log("=============================");
+    }
 
     const response = await axios.post(
       `https://api.github.com/repos/${owner}/${repo}/issues`,
@@ -218,9 +365,17 @@ router.post("/:owner/:repo/issues", async (req: Request, res: Response) => {
   } catch (error: unknown) {
     console.error("Error creating GitHub issue:", error);
     if (axios.isAxiosError(error)) {
-      res.status(error.response?.status || 500).json({
-        error: error.response?.data?.message || "Failed to create issue",
-      });
+      const status = error.response?.status || 500;
+      const message = error.response?.data?.message || "Failed to create issue";
+      
+      if (status === 403 && message.includes("Resource not accessible by integration")) {
+        res.status(403).json({
+          error: "GitHub App is not installed on this account. Please install the GitHub App first.",
+          details: "The app needs to be installed on your account to create issues. Visit your GitHub App settings to install it.",
+        });
+      } else {
+        res.status(status).json({ error: message });
+      }
     } else {
       res.status(500).json({ error: "Internal server error" });
     }
