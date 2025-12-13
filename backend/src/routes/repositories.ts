@@ -165,9 +165,12 @@ async function executeCline(prompt: string, workingDir?: string, timeout: number
   try {
     const tempDir = workingDir || os.tmpdir();
     
-    const env: Record<string, string> = {
-      ...process.env,
-    };
+    const env: Record<string, string> = {};
+    for (const key in process.env) {
+      if (process.env[key] !== undefined) {
+        env[key] = process.env[key] as string;
+      }
+    }
 
     if (VERCEL_AI_GATEWAY_API_KEY) {
       env.CLINE_PROVIDER = "vercel-ai-gateway";
