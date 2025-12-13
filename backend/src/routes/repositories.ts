@@ -1631,13 +1631,8 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
         ? `Analyze this entire codebase (${fileCount} files: ${filePaths}${moreFiles}). ${userPrompt}. Perform a comprehensive code review and identify bugs, security vulnerabilities, code quality issues, performance problems, and architectural concerns. For each issue found, provide: 1) A clear title, 2) File path and line numbers if possible, 3) Detailed description, 4) Priority level (HIGH/MEDIUM/LOW), 5) Type (bugs, security, performance, architecture, etc.). Format the output clearly with file paths.`
         : `Analyze this entire codebase (${fileCount} files: ${filePaths}${moreFiles}). Perform a comprehensive code review and identify bugs, security vulnerabilities, code quality issues, performance problems, and architectural concerns. For each issue found, provide: 1) A clear title, 2) File path and line numbers if possible, 3) Detailed description, 4) Priority level (HIGH/MEDIUM/LOW), 5) Type (bugs, security, performance, architecture, etc.). Format the output clearly with file paths.`;
 
-      const promptFile = path.join(tempDir, "cline-prompt.txt");
-      fs.writeFileSync(promptFile, prompt, "utf8");
-      
-      const clineCommand = `cat "${promptFile}" | npx --yes --prefer-offline --no-audit --no-fund cline 2>&1`;
-      
       console.log("Executing Cline analysis...");
-      const { stdout, stderr } = await executeCline(clineCommand, tempDir, 600000);
+      const { stdout, stderr } = await executeCline(prompt, tempDir, 600000);
 
       const analysisOutput = stdout || stderr || "";
       
@@ -1868,13 +1863,8 @@ Format your response clearly with the score prominently displayed.`;
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cline-pr-analysis-"));
     
     try {
-      const promptFile = path.join(tempDir, "cline-pr-prompt.txt");
-      fs.writeFileSync(promptFile, analysisPrompt, "utf8");
-      
-      const clineCommand = `cat "${promptFile}" | npx --yes --prefer-offline --no-audit --no-fund cline 2>&1`;
-      
       console.log(`Executing Cline PR analysis for PR #${prNumber}...`);
-      const { stdout, stderr } = await executeCline(clineCommand, tempDir, 300000);
+      const { stdout, stderr } = await executeCline(analysisPrompt, tempDir, 300000);
 
       const analysisOutput = stdout || stderr || "";
       
