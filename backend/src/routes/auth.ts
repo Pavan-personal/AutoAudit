@@ -189,13 +189,27 @@ router.get("/github/callback", async (req: Request, res: Response) => {
     console.log("User created/updated, setting session");
     console.log("User ID:", user.id);
     console.log("User email:", user.email);
+    console.log("Session ID before save:", req.sessionID);
     
     if (req.session) {
       req.session.userId = user.id;
       req.session.githubToken = access_token;
-      req.session.save(() => {
-        console.log("Session saved successfully");
+      
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error("Error saving session:", err);
+            reject(err);
+          } else {
+            console.log("Session saved successfully");
+            console.log("Session ID after save:", req.sessionID);
+            console.log("Session cookie will be set");
+            resolve();
+          }
+        });
       });
+    } else {
+      console.error("ERROR: No session object available!");
     }
     
     await prisma.oAuthState.delete({
@@ -207,7 +221,9 @@ router.get("/github/callback", async (req: Request, res: Response) => {
     const redirectUrl = `${FRONTEND_URL}/dashboard`;
     console.log("=== REDIRECT INFO ===");
     console.log("Frontend URL:", FRONTEND_URL);
-    console.log("Redirecting to dashboard with session cookie");
+    console.log("Redirect URL:", redirectUrl);
+    console.log("Session ID:", req.sessionID);
+    console.log("Cookies being sent:", res.getHeader("Set-Cookie"));
     console.log("====================");
     
     res.redirect(302, redirectUrl);
@@ -231,13 +247,18 @@ router.get("/github/callback", async (req: Request, res: Response) => {
 
 router.get("/me", async (req: Request, res: Response) => {
   try {
-    console.log("=== /auth/me called ===");
+    console.log("\n=== /auth/me called ===");
+    console.log("Session ID:", req.sessionID || "none");
     console.log("Session userId:", req.session?.userId || "none");
+    console.log("Cookies received:", req.headers.cookie || "none");
+    console.log("Origin:", req.headers.origin || "none");
+    console.log("Referer:", req.headers.referer || "none");
     
     const userId = req.session?.userId;
 
     if (!userId) {
       console.log("No userId in session - returning 401");
+      console.log("Full session object:", JSON.stringify(req.session || {}, null, 2));
       res.status(401).json({ error: "Not authenticated" });
       return;
     }
