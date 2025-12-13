@@ -162,9 +162,23 @@ async function getGitHubToken(req: Request): Promise<string | null> {
 
 async function executeCline(command: string, workingDir?: string, timeout: number = 300000): Promise<{ stdout: string; stderr: string }> {
   try {
+    const tempDir = workingDir || os.tmpdir();
+    const npmCache = path.join(tempDir, ".npm-cache");
+    const npmPrefix = path.join(tempDir, ".npm-prefix");
+    
+    if (!fs.existsSync(npmCache)) {
+      fs.mkdirSync(npmCache, { recursive: true });
+    }
+    if (!fs.existsSync(npmPrefix)) {
+      fs.mkdirSync(npmPrefix, { recursive: true });
+    }
+
     const env = {
       ...process.env,
       OPENAI_API_KEY: OPENAI_API_KEY || "",
+      npm_config_cache: npmCache,
+      npm_config_prefix: npmPrefix,
+      HOME: tempDir,
     };
 
     const options = {
@@ -1517,7 +1531,11 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
         ? `Analyze this entire codebase (${fileCount} files: ${filePaths}${moreFiles}). ${userPrompt}. Perform a comprehensive code review and identify bugs, security vulnerabilities, code quality issues, performance problems, and architectural concerns. For each issue found, provide: 1) A clear title, 2) File path and line numbers if possible, 3) Detailed description, 4) Priority level (HIGH/MEDIUM/LOW), 5) Type (bugs, security, performance, architecture, etc.). Format the output clearly with file paths.`
         : `Analyze this entire codebase (${fileCount} files: ${filePaths}${moreFiles}). Perform a comprehensive code review and identify bugs, security vulnerabilities, code quality issues, performance problems, and architectural concerns. For each issue found, provide: 1) A clear title, 2) File path and line numbers if possible, 3) Detailed description, 4) Priority level (HIGH/MEDIUM/LOW), 5) Type (bugs, security, performance, architecture, etc.). Format the output clearly with file paths.`;
 
-      const clineCommand = `npx -y cline "${prompt}"`;
+      const promptFile = path.join(tempDir, "cline-prompt.txt");
+      fs.writeFileSync(promptFile, prompt, "utf8");
+      
+      const escapedPromptFile = promptFile.replace(/'/g, "'\\''");
+      const clineCommand = `npx -y cline "$(cat '${escapedPromptFile}')"`;
       
       console.log("Executing Cline analysis...");
       const { stdout, stderr } = await executeCline(clineCommand, tempDir, 600000);
@@ -1730,7 +1748,11 @@ Format your response clearly with the score prominently displayed.`;
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cline-pr-analysis-"));
     
     try {
-      const clineCommand = `npx -y cline "${analysisPrompt}"`;
+      const promptFile = path.join(tempDir, "cline-pr-prompt.txt");
+      fs.writeFileSync(promptFile, analysisPrompt, "utf8");
+      
+      const escapedPromptFile = promptFile.replace(/'/g, "'\\''");
+      const clineCommand = `npx -y cline "$(cat '${escapedPromptFile}')"`;
       
       console.log(`Executing Cline PR analysis for PR #${prNumber}...`);
       const { stdout, stderr } = await executeCline(clineCommand, tempDir, 300000);

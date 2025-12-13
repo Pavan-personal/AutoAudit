@@ -128,7 +128,7 @@ function ClineFileSelection() {
                 <CardTitle>Scan Entire Repository</CardTitle>
               </div>
               <CardDescription>
-                Cline AI will analyze your entire codebase, including all files and directories (excluding common build artifacts and dependencies).
+                Cline AI tool will analyze your entire codebase, including all files and directories (excluding common build artifacts and dependencies).
               </CardDescription>
             </CardHeader>
             <CardContent>
