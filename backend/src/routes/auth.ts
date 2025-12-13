@@ -34,7 +34,7 @@ router.get("/github", async (_req: Request, res: Response) => {
     });
     
     console.log("State saved to database");
-    const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(GITHUB_CALLBACK_URL)}&scope=${encodeURIComponent("user:email repo issues:write")}&state=${state}`;
+    const authUrl = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&redirect_uri=${encodeURIComponent(GITHUB_CALLBACK_URL)}&state=${state}`;
     res.redirect(authUrl);
   } catch (error) {
     console.error("Error creating OAuth state:", error);
@@ -131,9 +131,14 @@ router.get("/github/callback", async (req: Request, res: Response) => {
       `);
     }
 
+    const isUserAccessToken = access_token.startsWith("ghu_");
+    const authHeader = isUserAccessToken ? `Bearer ${access_token}` : `token ${access_token}`;
+
     const userResponse = await axios.get("https://api.github.com/user", {
       headers: {
-        Authorization: `Bearer ${access_token}`,
+        Authorization: authHeader,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
       },
     });
 
@@ -141,7 +146,9 @@ router.get("/github/callback", async (req: Request, res: Response) => {
 
     const emailResponse = await axios.get<Array<{ email: string; primary: boolean; verified: boolean }>>("https://api.github.com/user/emails", {
       headers: {
-        Authorization: `Bearer ${access_token}`,
+        Authorization: authHeader,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
       },
     });
 

@@ -55,10 +55,14 @@ router.get("/", async (req: Request, res: Response) => {
       return;
     }
 
+    const isUserAccessToken = token.startsWith("ghu_");
+    const authHeader = isUserAccessToken ? `Bearer ${token}` : `token ${token}`;
+
     const response = await axios.get("https://api.github.com/user/repos", {
       headers: {
-        Authorization: `token ${token}`,
-        Accept: "application/vnd.github.v3+json",
+        Authorization: authHeader,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
       },
       params: {
         sort: "updated",
@@ -94,10 +98,14 @@ router.get("/:owner/:repo/contents", async (req: Request, res: Response) => {
       ? `https://api.github.com/repos/${owner}/${repo}/contents/${path}`
       : `https://api.github.com/repos/${owner}/${repo}/contents`;
 
+    const isUserAccessToken = token.startsWith("ghu_");
+    const authHeader = isUserAccessToken ? `Bearer ${token}` : `token ${token}`;
+
     const response = await axios.get(url, {
       headers: {
-        Authorization: `token ${token}`,
-        Accept: "application/vnd.github.v3+json",
+        Authorization: authHeader,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
       },
     });
 
@@ -133,12 +141,16 @@ router.get("/:owner/:repo/contents/:path", async (req: Request, res: Response) =
     const { owner, repo, path } = req.params;
     const filePath = decodeURIComponent(path);
 
+    const isUserAccessToken = token.startsWith("ghu_");
+    const authHeader = isUserAccessToken ? `Bearer ${token}` : `token ${token}`;
+
     const response = await axios.get(
       `https://api.github.com/repos/${owner}/${repo}/contents/${filePath}`,
       {
         headers: {
-          Authorization: `token ${token}`,
-          Accept: "application/vnd.github.v3.raw",
+          Authorization: authHeader,
+          Accept: "application/vnd.github.raw+json",
+          "X-GitHub-Api-Version": "2022-11-28",
         },
       }
     );
@@ -177,23 +189,8 @@ router.post("/:owner/:repo/issues", async (req: Request, res: Response) => {
       return;
     }
 
-    const testResponse = await axios.get("https://api.github.com/user", {
-      headers: {
-        Authorization: `token ${token}`,
-        Accept: "application/vnd.github.v3+json",
-      },
-    });
-
-    const tokenScopes = testResponse.headers["x-oauth-scopes"] || "";
-    console.log("Token scopes:", tokenScopes);
-    
-    if (!tokenScopes.includes("repo") && !tokenScopes.includes("write:repo")) {
-      res.status(403).json({
-        error: "Token missing required 'repo' scope. Please re-authenticate.",
-        scopes: tokenScopes,
-      });
-      return;
-    }
+    const isUserAccessToken = token.startsWith("ghu_");
+    const authHeader = isUserAccessToken ? `Bearer ${token}` : `token ${token}`;
 
     const response = await axios.post(
       `https://api.github.com/repos/${owner}/${repo}/issues`,
@@ -204,8 +201,9 @@ router.post("/:owner/:repo/issues", async (req: Request, res: Response) => {
       },
       {
         headers: {
-          Authorization: `token ${token}`,
-          Accept: "application/vnd.github.v3+json",
+          Authorization: authHeader,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
         },
       }
     );
