@@ -34,7 +34,7 @@ model AutomatedIssue {
   repositoryOwner String
   repositoryName  String
   issueNumber     Int
-  issueId         Int
+  issueId         BigInt
   title           String
   body            String?
   state           String
