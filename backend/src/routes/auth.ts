@@ -200,7 +200,7 @@ router.get("/github/callback", async (req: Request, res: Response) => {
     
     await prisma.oAuthState.delete({
       where: { id: oauthState.id },
-    }).catch((err) => {
+    }).catch((err: unknown) => {
       console.error("Error deleting OAuth state (non-critical):", err);
     });
     
