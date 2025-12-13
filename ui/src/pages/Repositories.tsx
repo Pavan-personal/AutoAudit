@@ -65,11 +65,16 @@ function Repositories() {
       return;
     }
 
-    const query = searchQuery.toLowerCase();
+    if (repositories.length === 0) {
+      setFilteredRepos([]);
+      return;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
     const filtered = repositories.filter(
       (repo) =>
         repo.name.toLowerCase().includes(query) ||
-        repo.description?.toLowerCase().includes(query) ||
+        (repo.description && repo.description.toLowerCase().includes(query)) ||
         repo.full_name.toLowerCase().includes(query)
     );
     setFilteredRepos(filtered);
