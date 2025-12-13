@@ -102,7 +102,10 @@ app.get("/api/status", (_req: express.Request, res: express.Response) => {
 });
 
 import authRoutes from "./routes/auth";
+import webhookRoutes from "./routes/webhook";
+
 app.use("/auth", authRoutes);
+app.use("/webhook", webhookRoutes);
 
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
