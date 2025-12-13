@@ -18,6 +18,7 @@ const GITHUB_APP_ID = process.env.GITHUB_APP_ID;
 const GITHUB_PRIVATE_KEY = process.env.GITHUB_PRIVATE_KEY;
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
+const VERCEL_AI_GATEWAY_API_KEY = process.env.VERCEL_AI_GATEWAY_API_KEY;
 
 declare module "express-session" {
   interface SessionData {
@@ -160,34 +161,52 @@ async function getGitHubToken(req: Request): Promise<string | null> {
   return user?.githubToken || null;
 }
 
-async function executeCline(command: string, workingDir?: string, timeout: number = 300000): Promise<{ stdout: string; stderr: string }> {
+async function executeCline(prompt: string, workingDir?: string, timeout: number = 300000): Promise<{ stdout: string; stderr: string }> {
   try {
     const tempDir = workingDir || os.tmpdir();
-    const npmCache = path.join(tempDir, ".npm-cache");
-    const npmPrefix = path.join(tempDir, ".npm-prefix");
     
-    if (!fs.existsSync(npmCache)) {
-      fs.mkdirSync(npmCache, { recursive: true });
-    }
-    if (!fs.existsSync(npmPrefix)) {
-      fs.mkdirSync(npmPrefix, { recursive: true });
-    }
-
-    const env = {
+    const env: Record<string, string> = {
       ...process.env,
-      OPENAI_API_KEY: OPENAI_API_KEY || "",
-      npm_config_cache: npmCache,
-      npm_config_prefix: npmPrefix,
-      HOME: tempDir,
     };
 
+    if (VERCEL_AI_GATEWAY_API_KEY) {
+      env.CLINE_PROVIDER = "vercel-ai-gateway";
+      env.CLINE_API_KEY = VERCEL_AI_GATEWAY_API_KEY;
+      env.CLINE_MODEL = "openai/gpt-4o-mini";
+      console.log("Using Vercel AI Gateway with Cline");
+    } else if (OPENAI_API_KEY) {
+      env.OPENAI_API_KEY = OPENAI_API_KEY;
+      console.log("Using OpenAI API directly with Cline");
+    } else {
+      throw new Error("Either VERCEL_AI_GATEWAY_API_KEY or OPENAI_API_KEY must be configured");
+    }
+
+    const promptFile = path.join(tempDir, "cline-prompt.txt");
+    fs.writeFileSync(promptFile, prompt, "utf8");
+
+    const clineCommand = `cat "${promptFile}" | npx --yes --prefer-offline --no-audit --no-fund cline 2>&1`;
+    
     const options = {
-      cwd: workingDir || process.cwd(),
+      cwd: tempDir,
       env: env,
       timeout: timeout,
+      maxBuffer: 10 * 1024 * 1024,
     };
 
-    const { stdout, stderr } = await execAsync(command, options);
+    const { stdout, stderr } = await execAsync(clineCommand, options);
+    
+    try {
+      if (fs.existsSync(promptFile)) {
+        fs.unlinkSync(promptFile);
+      }
+      const npmCache = path.join(tempDir, ".npm");
+      if (fs.existsSync(npmCache)) {
+        fs.rmSync(npmCache, { recursive: true, force: true });
+      }
+    } catch (cleanupError) {
+      console.error("Cleanup error (non-fatal):", cleanupError);
+    }
+
     return { stdout, stderr };
   } catch (error: unknown) {
     if (error && typeof error === "object" && "stdout" in error && "stderr" in error) {
@@ -1547,7 +1566,11 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
       
       res.json(analysisResult);
     } finally {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (cleanupError) {
+        console.error("Error cleaning up temp directory:", cleanupError);
+      }
     }
   } catch (error: unknown) {
     console.error("Error in Cline analysis:", error);
@@ -1792,7 +1815,11 @@ Format your response clearly with the score prominently displayed.`;
         },
       });
     } finally {
-      fs.rmSync(tempDir, { recursive: true, force: true });
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+      } catch (cleanupError) {
+        console.error("Error cleaning up temp directory:", cleanupError);
+      }
     }
   } catch (error: unknown) {
     console.error("Error in Cline PR analysis:", error);
