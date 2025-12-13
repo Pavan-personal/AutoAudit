@@ -67,17 +67,30 @@ function IssuesDisplay() {
       );
 
       if (!response.ok) {
-        throw new Error("Failed to create issue");
+        const errorData = await response.json().catch(() => ({}));
+        if (response.status === 403 && errorData.error?.includes("not accessible by integration")) {
+          alert("GitHub token doesn't have permission to create issues. Please re-authenticate by logging out and logging back in.");
+        } else {
+          throw new Error(errorData.error || "Failed to create issue");
+        }
+        const newIssues = new Set(creatingIssues);
+        newIssues.delete(issueIndex);
+        setCreatingIssues(newIssues);
+        return;
       }
 
       const newIssues = new Set(creatingIssues);
       newIssues.delete(issueIndex);
       setCreatingIssues(newIssues);
+      alert("Issue created successfully!");
     } catch (error) {
       console.error("Error creating issue:", error);
       const newIssues = new Set(creatingIssues);
       newIssues.delete(issueIndex);
       setCreatingIssues(newIssues);
+      if (error instanceof Error) {
+        alert(`Failed to create issue: ${error.message}`);
+      }
     }
   }
 

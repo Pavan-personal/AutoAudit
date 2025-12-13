@@ -1,9 +1,18 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, File, Folder, ChevronRight, ChevronDown, Check, Loader2 } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 
 interface FileItem {
   name: string;
@@ -34,6 +43,8 @@ function FileSelection() {
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currentPath, setCurrentPath] = useState<string>("");
+  const [showPromptDialog, setShowPromptDialog] = useState(false);
+  const [userPrompt, setUserPrompt] = useState("");
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
   const OUMI_API_URL = import.meta.env.VITE_OUMI_API_URL || "https://pavannnnnnn-autoaudi-ai-oumi.hf.space/api/analyze";
@@ -85,7 +96,6 @@ function FileSelection() {
 
     fetchContents(currentPath);
   }, [owner, repo, currentPath, navigate, fetchContents]);
-
 
   function updateTree(nodes: TreeNode[], targetPath: string, updater: (node: TreeNode) => TreeNode): TreeNode[] {
     return nodes.map((node) => {
@@ -152,11 +162,15 @@ function FileSelection() {
     setSelectedFiles(newSelected);
   }
 
-  async function handleAnalyze() {
+  function handleAnalyzeClick() {
     if (selectedFiles.size === 0) {
       return;
     }
+    setShowPromptDialog(true);
+  }
 
+  async function handleAnalyze() {
+    setShowPromptDialog(false);
     setAnalyzing(true);
     setError(null);
 
@@ -201,6 +215,7 @@ function FileSelection() {
           })),
           options: {
             type: ["bugs", "security"],
+            userPrompt: userPrompt.trim() || undefined,
           },
         }),
         signal: controller.signal,
@@ -234,64 +249,63 @@ function FileSelection() {
       const isDisabled = !isSelected && selectedFiles.size >= 5;
 
       return (
-        <div key={node.item.path}>
-          <Card
-            className={`cursor-pointer transition-all ${
-              isSelected
-                ? "border-primary bg-secondary/50"
-                : isDisabled
-                ? "opacity-50"
-                : "hover:border-border"
-            }`}
-            onClick={() => {
-              if (isFile) {
+        <div key={node.item.path} className={level > 0 ? "mt-1" : "mt-2"}>
+          {isFile ? (
+            <Card
+              className={`cursor-pointer transition-all ${
+                isSelected
+                  ? "border-primary bg-secondary/50"
+                  : isDisabled
+                  ? "opacity-50"
+                  : "hover:border-border"
+              }`}
+              onClick={() => {
                 if (!isDisabled) {
                   toggleFile(node.item.path);
                 }
-              } else {
-                fetchFolderContents(node.item.path, node);
-              }
-            }}
-          >
-            <CardContent className="p-4">
-              <div className="flex items-center gap-4" style={{ paddingLeft: `${level * 20}px` }}>
-                {isFile ? (
-                  <>
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => !isDisabled && toggleFile(node.item.path)}
-                      disabled={isDisabled}
-                      onClick={(e) => e.stopPropagation()}
-                    />
-                    <File className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                  </>
-                ) : (
-                  <>
-                    <div className="w-5 h-5 flex-shrink-0" />
-                    {node.expanded ? (
-                      <ChevronDown className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    ) : (
-                      <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                    )}
-                    <Folder className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                  </>
-                )}
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{node.item.name}</p>
-                  {isFile && (
-                    <p className="text-sm text-muted-foreground truncate">
+              }}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3" style={{ paddingLeft: `${level * 24}px` }}>
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => !isDisabled && toggleFile(node.item.path)}
+                    disabled={isDisabled}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <File className="w-5 h-5 text-muted-foreground flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium truncate">{node.item.name}</p>
+                    <p className="text-sm text-muted-foreground truncate mt-0.5">
                       {node.item.path}
                     </p>
+                  </div>
+                  {isSelected && (
+                    <Check className="w-5 h-5 text-primary flex-shrink-0" />
                   )}
                 </div>
-                {isFile && isSelected && (
-                  <Check className="w-5 h-5 text-primary flex-shrink-0" />
+              </CardContent>
+            </Card>
+          ) : (
+            <div
+              className={`cursor-pointer transition-all rounded-lg border border-border/50 bg-secondary/20 hover:bg-secondary/40 p-3 ${
+                level > 0 ? "ml-4" : ""
+              }`}
+              onClick={() => fetchFolderContents(node.item.path, node)}
+            >
+              <div className="flex items-center gap-3" style={{ paddingLeft: `${level * 24}px` }}>
+                {node.expanded ? (
+                  <ChevronDown className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                ) : (
+                  <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                 )}
+                <Folder className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <p className="font-medium text-sm">{node.item.name}</p>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          )}
           {!isFile && node.expanded && node.children.length > 0 && (
-            <div className="ml-4">{renderTree(node.children, level + 1)}</div>
+            <div className="mt-1">{renderTree(node.children, level + 1)}</div>
           )}
         </div>
       );
@@ -348,7 +362,7 @@ function FileSelection() {
             </Card>
           ) : (
             <>
-              <div className="space-y-2 mb-6 max-h-[60vh] overflow-y-auto">
+              <div className="space-y-1 mb-6 max-h-[60vh] overflow-y-auto">
                 {renderTree(tree)}
               </div>
 
@@ -360,7 +374,7 @@ function FileSelection() {
                   Cancel
                 </Button>
                 <Button
-                  onClick={handleAnalyze}
+                  onClick={handleAnalyzeClick}
                   disabled={selectedFiles.size === 0 || analyzing}
                 >
                   {analyzing ? (
@@ -377,6 +391,42 @@ function FileSelection() {
           )}
         </div>
       </div>
+
+      <Dialog open={showPromptDialog} onOpenChange={setShowPromptDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Additional Analysis Prompt</DialogTitle>
+            <DialogDescription>
+              Optionally provide additional instructions for the AI analysis. Leave empty to use default analysis.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <Textarea
+              placeholder="e.g., Focus on security vulnerabilities, check for performance issues, etc."
+              value={userPrompt}
+              onChange={(e) => setUserPrompt(e.target.value)}
+              className="min-h-[100px]"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPromptDialog(false);
+                setUserPrompt("");
+              }}
+            >
+              Skip
+            </Button>
+            <Button
+              onClick={handleAnalyze}
+              disabled={analyzing}
+            >
+              Continue
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
