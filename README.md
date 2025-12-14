@@ -92,6 +92,12 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 49 47 PM" src="https://github.com/user-attachments/assets/3cec0cb5-66f4-4996-84bd-40c623b3fb5b" />
 
+### For more examples please refer this repo's issues itself and also these links as well
+
+- https://github.com/Pavan-personal/WalletBuddy/issues/8
+- https://github.com/Pavan-personal/WalletBuddy/issues/7
+- https://github.com/Pavan-personal/WalletBuddy/issues/3
+
 ### Code review by Oumi (select upto 5 files)
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 45 50 PM" src="https://github.com/user-attachments/assets/02c03c11-84e2-43b5-a44f-f15336696f40" />
@@ -103,6 +109,10 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 ### Oumi inference API giving list of issues as response
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 50 32 PM" src="https://github.com/user-attachments/assets/b87f8b18-9814-4b93-982f-36f845074c27" />
+
+### Complete codebase scan
+
+<img width="1470" height="956" alt="Screenshot 2025-12-15 at 12 40 03 AM" src="https://github.com/user-attachments/assets/7f13011b-11a0-488a-8192-746723fbcabf" />
 
 ### PR Analysis page
 
@@ -166,6 +176,14 @@ GitHub → Webhooks → Backend (Vercel) → Kestra (Docker)
 ### NeonDB setup
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 58 57 PM" src="https://github.com/user-attachments/assets/31bdc88b-33e3-4de6-85e3-307dfc8f5a1f" />
+
+### CodeRabbit Issue discussions
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 46 39 PM" src="https://github.com/user-attachments/assets/7f3323b8-ac02-4364-a963-893d3bf69361" />
+
+### CodeRabbit PR reviews
+
+<img width="1470" alt="Screenshot 2025-12-15 at 12 49 57 AM" src="https://github.com/user-attachments/assets/f463f513-029c-4385-a98f-4d528f998578" />
 
 ## Setup for open source devs
 
