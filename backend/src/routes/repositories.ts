@@ -1270,6 +1270,28 @@ router.post("/:owner/:repo/issues/:number/assign", async (req: Request, res: Res
 
     console.log(`[ASSIGN] Assigning issue #${number} to ${assignee} in ${owner}/${repo}`);
 
+    // Check if issue already has assignees
+    const issueResponse = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/issues/${number}`,
+      {
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      }
+    );
+
+    if (issueResponse.data.assignees && issueResponse.data.assignees.length > 0) {
+      console.log(`[ASSIGN] Issue #${number} already has assignees, skipping`);
+      res.json({ 
+        success: false, 
+        message: "Issue already assigned",
+        assignees: issueResponse.data.assignees 
+      });
+      return;
+    }
+
     // Call GitHub API to assign the issue
     const response = await axios.post(
       `https://api.github.com/repos/${owner}/${repo}/issues/${number}/assignees`,
