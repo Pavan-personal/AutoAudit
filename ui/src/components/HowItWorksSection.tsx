@@ -10,8 +10,8 @@ import {
   Bot, 
   GitPullRequest, 
   CheckCircle2,
-  Merge,
-  Trash2,
+  BarChart,
+  Shield,
   ArrowDown
 } from 'lucide-react';
 
@@ -42,15 +42,15 @@ const workflowSteps = [
   },
   {
     phase: 'Phase 3',
-    title: 'AI Fix & Merge',
-    icon: Merge,
+    title: 'AI PR Review',
+    icon: BarChart,
     color: 'primary',
     steps: [
-      { icon: Bot, text: 'Cline CLI edits code' },
-      { icon: GitPullRequest, text: 'PR raised automatically' },
-      { icon: MessageSquare, text: 'CodeRabbit reviews' },
-      { icon: CheckCircle2, text: 'LGTM → Auto-merge' },
-      { icon: Trash2, text: 'Close issue, delete branch' },
+      { icon: GitPullRequest, text: 'PR created and submitted' },
+      { icon: Bot, text: 'AI analyzes code quality' },
+      { icon: Shield, text: 'Security & best practices check' },
+      { icon: BarChart, text: 'Merge readiness % calculated' },
+      { icon: CheckCircle2, text: 'Ready to merge with confidence' },
     ]
   }
 ];
