@@ -197,6 +197,10 @@ async function executeAIAnalysis(prompt: string, timeout: number = 300000, useJs
         requestBody.response_format = { type: "json_object" };
       }
 
+      // Log prompt size for debugging
+      const promptLength = prompt.length;
+      console.log(`Prompt size: ${promptLength} characters, JSON mode: ${useJsonMode}`);
+
       const response = await axios.post(
         `${baseURL}/chat/completions`,
         requestBody,
@@ -214,10 +218,17 @@ async function executeAIAnalysis(prompt: string, timeout: number = 300000, useJs
     } catch (apiError) {
       if (axios.isAxiosError(apiError)) {
         const errorMsg = apiError.response?.data?.error?.message || apiError.message;
+        const errorDetails = apiError.response?.data?.error || {};
+        console.error(`AI API error details:`, JSON.stringify(errorDetails, null, 2));
         
-        // If Vercel Gateway fails, try falling back to OpenAI API if available
-        if (useVercelGateway && OPENAI_API_KEY && (errorMsg.includes("credit card") || errorMsg.includes("401") || errorMsg.includes("403"))) {
-          console.log(`Vercel AI Gateway failed, falling back to OpenAI API: ${errorMsg}`);
+        // If Vercel Gateway fails with Invalid input or similar errors, try OpenAI directly
+        if (useVercelGateway && OPENAI_API_KEY && (
+          errorMsg.includes("Invalid input") || 
+          errorMsg.includes("credit card") || 
+          errorMsg.includes("401") || 
+          errorMsg.includes("403")
+        )) {
+          console.log(`Vercel AI Gateway failed (${errorMsg}), falling back to OpenAI API...`);
           try {
             const fallbackBody: any = {
               model: "gpt-4o-mini",
@@ -1754,18 +1765,15 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
 
       // Build prompt with ACTUAL file contents
       const filesContent = batch.map(f => {
-        const truncatedContent = f.content.substring(0, 8000); // Limit to prevent token overflow
-        return `### File: ${f.path}
-\`\`\`
-${truncatedContent}
-\`\`\``;
+        const truncatedContent = f.content.substring(0, 6000); // Reduced to prevent token overflow
+        return `### File: ${f.path}\n\`\`\`\n${truncatedContent}\n\`\`\``;
       }).join('\n\n');
 
       const prompt = `Analyze the following ${batch.length} files for bugs, security vulnerabilities, and code quality issues.
 
 ${filesContent}
 
-Return your analysis as a JSON object with this exact structure:
+You MUST return valid JSON matching this structure:
 {
   "files": [
     {
@@ -1773,8 +1781,8 @@ Return your analysis as a JSON object with this exact structure:
       "issues": [
         {
           "title": "Brief issue title",
-          "severity": "HIGH" | "MEDIUM" | "LOW",
-          "type": "security" | "bug" | "performance" | "code-quality",
+          "severity": "HIGH",
+          "type": "security",
           "description": "Detailed description with specific code references",
           "line": 42
         }
@@ -1783,12 +1791,13 @@ Return your analysis as a JSON object with this exact structure:
   ]
 }
 
-IMPORTANT:
-- Only report REAL issues you can see in the actual code
-- Be specific - reference actual functions, variables, or patterns
-- If a file has no issues, include it with an empty issues array
-- Focus on actionable problems
-${userPrompt ? `\n- Additional instructions: ${userPrompt}` : ''}`;
+Rules:
+- severity must be: HIGH, MEDIUM, or LOW
+- type must be: security, bug, performance, or code-quality
+- Only report REAL issues you can see in the code
+- Reference actual functions, variables, or patterns
+- If a file has no issues, include it with empty issues array
+${userPrompt ? `\n- Additional: ${userPrompt}` : ''}`;
 
       const { stdout } = await executeAIAnalysis(prompt, 300000, true);
 
