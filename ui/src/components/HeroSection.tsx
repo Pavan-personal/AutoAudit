@@ -3,6 +3,8 @@ import { gsap } from 'gsap';
 import { ArrowRight, Zap, Shield, Bot, Github, Star, GitFork } from 'lucide-react';
 import heroBg from '@/assets/hero-bg.jpg';
 
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
+
 const HeroSection = () => {
   const heroRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -113,14 +115,22 @@ const HeroSection = () => {
 
             {/* CTA Buttons */}
             <div ref={ctaRef} className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start mb-12">
-              <button className="btn-primary text-base">
-                Start Free Trial
+              <button 
+                onClick={() => window.location.href = `${BACKEND_URL}/auth/github`}
+                className="btn-primary text-base"
+              >
+                Get Started
                 <ArrowRight className="w-5 h-5" />
               </button>
-              <button className="btn-secondary text-base">
+              <a
+                href="https://github.com/Pavan-personal/AutoAudit"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-secondary text-base"
+              >
                 <Github className="w-5 h-5" />
                 View on GitHub
-              </button>
+              </a>
             </div>
 
             {/* Stats */}

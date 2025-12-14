@@ -64,7 +64,7 @@ const Navbar = () => {
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-4">
             <a
-              href="https://github.com"
+              href="https://github.com/Pavan-personal/AutoAudit"
               target="_blank"
               rel="noopener noreferrer"
               className="btn-ghost text-sm"
@@ -106,7 +106,7 @@ const Navbar = () => {
               ))}
               <div className="pt-4 mt-4 border-t border-border/50 flex flex-col gap-3">
                 <a
-                  href="https://github.com"
+                  href="https://github.com/Pavan-personal/AutoAudit"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-secondary justify-center"

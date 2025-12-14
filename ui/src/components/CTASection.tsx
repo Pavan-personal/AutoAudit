@@ -3,6 +3,8 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ArrowRight, Github, Rocket } from 'lucide-react';
 
+const BACKEND_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
+
 gsap.registerPlugin(ScrollTrigger);
 
 const CTASection = () => {
@@ -54,14 +56,22 @@ const CTASection = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <button className="btn-primary text-lg py-5 px-10">
+            <button 
+              onClick={() => window.location.href = `${BACKEND_URL}/auth/github`}
+              className="btn-primary text-lg py-5 px-10"
+            >
               Get Started
               <ArrowRight className="w-5 h-5" />
             </button>
-            <button className="btn-secondary text-lg py-5 px-10">
+            <a
+              href="https://github.com/Pavan-personal/AutoAudit"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary text-lg py-5 px-10"
+            >
               <Github className="w-5 h-5" />
               View on GitHub
-            </button>
+            </a>
           </div>
           
           <div className="mt-10 flex items-center justify-center gap-8 text-sm text-muted-foreground">
