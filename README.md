@@ -1,3 +1,6 @@
+Note: This isn’t a README.  
+It’s a build log, the journey of creating AutoAudit from zero, the roadblocks I hit, and the learnings that came with them.
+
 # AutoAudit
 
 AI-powered GitHub workflow automation that scans codebases, assigns issues intelligently, and reviews PRs automatically.
@@ -6,17 +9,17 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 
 <img width="1470" alt="Screenshot 2025-12-14 at 10 37 06 PM" src="https://github.com/user-attachments/assets/2b7f722e-45fe-4a21-a554-efb2ae639548" />
 
-<br /><br />
-
 ## Features
 
 - **Deep Codebase Scanning** - Oumi AI analyzes repositories for security vulnerabilities, performance issues, and code quality problems
 - **Smart Issue Assignment** - AI analyzes contributor comments and auto-assigns qualified developers
 - **AI PR Review** - Merge readiness scoring based on code quality, security, and best practices
 
+### Overview of each feature
+
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 11 13 00 PM" src="https://github.com/user-attachments/assets/866d1665-3cae-4aa0-b1a2-acdbfa00a837" />
 
-<br /><br />
+### Flow of each feature
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 11 13 19 PM" src="https://github.com/user-attachments/assets/1b3a096e-c2ab-4db4-875b-bf4bb9f0903e" />
 
@@ -33,8 +36,6 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 - PostgreSQL + Prisma ORM
 - GitHub OAuth & Webhooks
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 11 17 14 PM" src="https://github.com/user-attachments/assets/1761209d-fe3a-4ab7-88a3-0b077d1e5c26" />
-
-
 
 ### AI & Automation
 - **Oumi AI** - Deployed on Hugging Face for codebase scanning
@@ -61,6 +62,36 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 2. **Assign** - Contributor comments → AI analyzes intent → Auto-assigns if qualified
 3. **Review** - PR created → AI scores merge readiness → Confidence-based merging
 
+### All issues page
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 50 41 PM" src="https://github.com/user-attachments/assets/905d7dc8-f2cc-4795-a3fd-630529c26454" />
+
+### Clicking on Automate issue
+
+<img width="1385" height="799" alt="Screenshot 2025-12-14 at 8 25 25 PM" src="https://github.com/user-attachments/assets/c10581f1-f008-4957-a841-744003af3dba" />
+
+### Issue is Automated
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 50 58 PM" src="https://github.com/user-attachments/assets/1fd37055-00a8-443e-9ed7-12a0c9fbd123" />
+
+### Live example of automated Issue assignment (for automated issues only)
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 50 14 PM" src="https://github.com/user-attachments/assets/56b02c39-e6d8-43bf-996f-ab0563d9c7a6" />
+
+#### As seen above, the AI initially rejected a casual issue assignment request and asked for a clearer explanation. Once the user shared a solid approach in the comments, the issue was automatically assigned.
+
+### Live example 2 (here user causually asked to assign him the issue, rejected!!!)
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 49 33 PM" src="https://github.com/user-attachments/assets/7e7671da-368b-4825-b70e-a168b7898cee" />
+
+### He again commented casually without mentioning his way to approach the issue, rejected!!!
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 49 42 PM" src="https://github.com/user-attachments/assets/ddeee00c-597a-428f-aa76-0b9a0120cea1" />
+
+### Third time user gave a valid approach to resolve the issue, now accepted and assigned!!!
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 49 47 PM" src="https://github.com/user-attachments/assets/3cec0cb5-66f4-4996-84bd-40c623b3fb5b" />
+
 ### Code review by Oumi (select upto 5 files)
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 45 50 PM" src="https://github.com/user-attachments/assets/02c03c11-84e2-43b5-a44f-f15336696f40" />
@@ -76,6 +107,8 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 ### PR Analysis page
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 51 10 PM" src="https://github.com/user-attachments/assets/ee8a0228-6081-4420-9d70-24ab06f1c7ad" />
+
+### Full codebase scan 
 
 ### Merge Readiness Score
 
@@ -128,11 +161,11 @@ GitHub → Webhooks → Backend (Vercel) → Kestra (Docker)
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 52 28 PM" src="https://github.com/user-attachments/assets/6bbde497-224a-4fbb-9ad5-5f6bff9d6dcf" />
 
+#### I initially faced multiple issues while deploying Kestra. Railway ran into memory limits, AWS Free Tier had long verification delays, and Oracle Cloud required a credit card. I finally used a Docker-based setup. Since the deployed URLs weren’t compatible, I used ngrok for port forwarding. This works locally, but anyone else testing it will need their own Kestra + ngrok setup.
+
 ### NeonDB setup
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 58 57 PM" src="https://github.com/user-attachments/assets/31bdc88b-33e3-4de6-85e3-307dfc8f5a1f" />
-
-#### I initially faced multiple issues while deploying Kestra. Railway ran into memory limits, AWS Free Tier had long verification delays, and Oracle Cloud required a credit card. I finally used a Docker-based setup. Since the deployed URLs weren’t compatible, I used ngrok for port forwarding. This works locally, but anyone else testing it will need their own Kestra + ngrok setup.
 
 ## Setup for open source devs
 
