@@ -1282,8 +1282,20 @@ router.post("/:owner/:repo/issues/:number/assign", async (req: Request, res: Res
       }
     );
 
-    if (issueResponse.data.assignees && issueResponse.data.assignees.length > 0) {
-      console.log(`[ASSIGN] Issue #${number} already has assignees, skipping`);
+    // Check if multiple assignees are allowed
+    const automatedIssue = await prisma.automatedIssue.findFirst({
+      where: {
+        repositoryOwner: owner,
+        repositoryName: repo,
+        issueNumber: parseInt(number),
+      },
+      select: {
+        allowMultipleAssignees: true,
+      },
+    });
+
+    if (!automatedIssue?.allowMultipleAssignees && issueResponse.data.assignees && issueResponse.data.assignees.length > 0) {
+      console.log(`[ASSIGN] Issue #${number} already has assignees and multiple assignees not allowed, skipping`);
       res.json({ 
         success: false, 
         message: "Issue already assigned",

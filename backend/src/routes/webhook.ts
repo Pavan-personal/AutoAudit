@@ -54,6 +54,12 @@ async function handleIssueComment(payload: any) {
       return;
     }
     
+    // Ignore comments from repo owner to prevent execution
+    if (comment.user.login === owner) {
+      console.log(`[WEBHOOK] Ignoring comment from repo owner ${owner}`);
+      return;
+    }
+    
     console.log(`[WEBHOOK] Checking if issue #${issueNumber} is automated...`);
     
     // Check if this issue is in our automated issues table

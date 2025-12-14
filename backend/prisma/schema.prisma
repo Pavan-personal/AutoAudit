@@ -46,6 +46,7 @@ model AutomatedIssue {
   createdAt       DateTime
   updatedAt       DateTime
   autoAssign      Boolean  @default(true)
+  allowMultipleAssignees Boolean @default(false)
   assignedTo      String?
   userId          String
   githubToken     String?  // Token for Kestra to call GitHub API
