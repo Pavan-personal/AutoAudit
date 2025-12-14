@@ -1,4 +1,4 @@
-import { Github, Twitter, Linkedin, Mail } from 'lucide-react';
+import { Github, Linkedin, Mail } from 'lucide-react';
 import logo from '@/assets/logo.png';
 
 const Footer = () => {
@@ -9,17 +9,16 @@ const Footer = () => {
       { name: 'Integrations', href: '#integrations' },
     ],
     Resources: [
-      { name: 'GitHub Repo', href: '#' },
+      { name: 'GitHub Repo', href: 'https://github.com/Pavan-personal/AutoAudit' },
       { name: 'Community', href: '#' },
       { name: 'Changelog', href: '#' },
     ],
   };
 
   const socialLinks = [
-    { icon: Github, href: 'https://github.com', label: 'GitHub' },
-    { icon: Twitter, href: 'https://twitter.com', label: 'Twitter' },
-    { icon: Linkedin, href: 'https://linkedin.com', label: 'LinkedIn' },
-    { icon: Mail, href: 'mailto:hello@autoaudit.dev', label: 'Email' },
+    { icon: Github, href: 'https://github.com/Pavan-personal/AutoAudit', label: 'GitHub' },
+    { icon: Linkedin, href: 'https://linkedin.com/in/pavan-personal', label: 'LinkedIn' },
+    { icon: Mail, href: 'mailto:kumarpavan39877@gmail.com', label: 'Email' },
   ];
 
   return (
