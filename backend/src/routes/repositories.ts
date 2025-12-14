@@ -1802,7 +1802,18 @@ ${userPrompt ? `\n- Additional: ${userPrompt}` : ''}`;
       const { stdout } = await executeAIAnalysis(prompt, 300000, true);
 
       try {
-        const batchResult = JSON.parse(stdout);
+        // Clean the response - remove markdown code blocks if present
+        let cleanedResponse = stdout.trim();
+        
+        // Remove ```json or ``` wrappers
+        if (cleanedResponse.startsWith('```')) {
+          cleanedResponse = cleanedResponse
+            .replace(/^```(?:json)?\n?/i, '')
+            .replace(/\n?```$/i, '')
+            .trim();
+        }
+        
+        const batchResult = JSON.parse(cleanedResponse);
         if (batchResult.files && Array.isArray(batchResult.files)) {
           for (const fileResult of batchResult.files) {
             const issues = (fileResult.issues || []).map((issue: any) => ({

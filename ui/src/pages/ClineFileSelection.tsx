@@ -46,23 +46,33 @@ function ClineFileSelection() {
       const timeoutId = setTimeout(() => controller.abort(), 600000);
 
       // Simulate progress for better UX
+      let currentBatch = 1;
       const progressInterval = setInterval(() => {
         setProgress(prev => {
           if (prev >= 90) return prev; // Cap at 90% until complete
-          return prev + Math.random() * 15;
+          return prev + Math.random() * 10;
         });
       }, 2000);
 
-      // Update status messages
+      // Update status messages based on estimated batches (assuming ~10 files per batch)
       setTimeout(() => setStatusMessage("Analyzing files with AI..."), 3000);
-      setTimeout(() => setStatusMessage("Processing batch 1/8..."), 8000);
-      setTimeout(() => setStatusMessage("Processing batch 2/8..."), 20000);
-      setTimeout(() => setStatusMessage("Processing batch 3/8..."), 35000);
-      setTimeout(() => setStatusMessage("Processing batch 4/8..."), 50000);
-      setTimeout(() => setStatusMessage("Processing batch 5/8..."), 65000);
-      setTimeout(() => setStatusMessage("Processing batch 6/8..."), 80000);
-      setTimeout(() => setStatusMessage("Processing batch 7/8..."), 95000);
-      setTimeout(() => setStatusMessage("Finalizing results..."), 110000);
+      setTimeout(() => {
+        currentBatch = 1;
+        setStatusMessage("Processing batch 1...");
+      }, 8000);
+      setTimeout(() => {
+        currentBatch = 2;
+        setStatusMessage("Processing batch 2...");
+      }, 25000);
+      setTimeout(() => {
+        currentBatch = 3;
+        setStatusMessage("Processing batch 3...");
+      }, 42000);
+      setTimeout(() => {
+        currentBatch = 4;
+        setStatusMessage("Processing batch 4...");
+      }, 60000);
+      setTimeout(() => setStatusMessage("Finalizing analysis..."), 80000);
 
       const analysisResponse = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/analyze-cline`, {
         method: "POST",
@@ -80,7 +90,7 @@ function ClineFileSelection() {
       clearTimeout(timeoutId);
       clearInterval(progressInterval);
       setProgress(100);
-      setStatusMessage("Analysis complete!");
+      setStatusMessage("✅ Analysis complete! Redirecting...");
 
       if (!analysisResponse.ok) {
         const errorData = await analysisResponse.json().catch(() => ({}));
@@ -89,8 +99,9 @@ function ClineFileSelection() {
 
       const analysisData = await analysisResponse.json();
       
-      toast.success("Repository Analysis Complete", {
-        description: `Analyzed ${analysisData.summary?.total_files || 0} files and found ${analysisData.summary?.total_issues || 0} issues.`,
+      toast.success("✨ Repository Analysis Complete!", {
+        description: `Found ${analysisData.summary?.total_issues || 0} issues across ${analysisData.summary?.files_with_issues || 0} files.`,
+        duration: 3000,
       });
       
       navigate(`/repositories/${owner}/${repo}/issues`, {
