@@ -4,6 +4,7 @@ import { ArrowLeft, Github, MessageSquare, User, Calendar, Tag, AlertCircle, Spa
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +47,7 @@ function IssuesList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [automateDialog, setAutomateDialog] = useState<{ open: boolean; issue: Issue | null }>({ open: false, issue: null });
+  const [allowMultipleAssignees, setAllowMultipleAssignees] = useState(false);
   const API_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
 
   useEffect(() => {
@@ -135,6 +137,7 @@ function IssuesList() {
           createdAt: automateDialog.issue.created_at,
           updatedAt: automateDialog.issue.updated_at,
           autoAssign: true,
+          allowMultipleAssignees: allowMultipleAssignees,
         }),
       });
       
@@ -481,6 +484,23 @@ function IssuesList() {
                 </p>
               </div>
             </div>
+            
+            <div className="flex items-center space-x-2 pt-2 border-t">
+              <Checkbox 
+                id="multipleAssignees" 
+                checked={allowMultipleAssignees}
+                onCheckedChange={(checked) => setAllowMultipleAssignees(checked as boolean)}
+              />
+              <label
+                htmlFor="multipleAssignees"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+              >
+                Allow Multiple Assignees
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground ml-6">
+              Enable this to allow multiple contributors to be assigned to this issue. If disabled, only the first person with a valid approach will be assigned.
+            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAutomateDialog({ open: false, issue: null })}>

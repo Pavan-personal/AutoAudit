@@ -137,5 +137,5 @@ triggers:
     type: io.kestra.plugin.core.trigger.Webhook
     key: "{{ secret('WEBHOOK_SECRET_KEY') }}"
     conditions:
-      - type: io.kestra.plugin.core.condition.ExpressionCondition
+      - type: io.kestra.plugin.core.condition.Expression
         expression: "{{ trigger.body.commenter_username != null and trigger.body.github_token != null }}"

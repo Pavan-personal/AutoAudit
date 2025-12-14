@@ -1115,6 +1115,7 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
               comments,
               createdAt,
               updatedAt,
+              allowMultipleAssignees,
             } = req.body;
 
             const automatedIssue = await prisma.automatedIssue.upsert({
@@ -1137,6 +1138,7 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
                 updatedAt,
                 autoAssign: true,
                 githubToken: user.githubToken,
+                allowMultipleAssignees: allowMultipleAssignees ?? false,
               },
               create: {
                 repositoryOwner: owner,
@@ -1156,6 +1158,7 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
                 autoAssign: true,
                 userId: user.id,
                 githubToken: user.githubToken,
+                allowMultipleAssignees: allowMultipleAssignees ?? false,
               },
             });
 

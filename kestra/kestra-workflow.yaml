@@ -42,24 +42,32 @@ tasks:
     type: io.kestra.plugin.scripts.python.Script
     containerImage: python:3.11-slim
     beforeCommands:
-      - pip install openai
+      - pip install openai kestra
     env:
       OPENAI_API_KEY: "{{ secret('OPENAI_API_KEY') }}"
+      ISSUE_TITLE: "{{ trigger.body.issue_title }}"
+      ISSUE_BODY: "{{ trigger.body.issue_body }}"
+      COMMENTER_USERNAME: "{{ trigger.body.commenter_username }}"
+      COMMENT_BODY: "{{ trigger.body.comment_body }}"
     script: |
       import os
-      import json
       from openai import OpenAI
+      from kestra import Kestra
       
       client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
       
-      # Prepare the analysis prompt
+      issue_title = os.environ.get('ISSUE_TITLE', '')
+      issue_body = os.environ.get('ISSUE_BODY', '')
+      commenter_username = os.environ.get('COMMENTER_USERNAME', '')
+      comment_body = os.environ.get('COMMENT_BODY', '')
+      
       prompt = f"""Analyze this GitHub issue comment to determine assignment intent.
 
-      Issue Title: {{ inputs.issue_title }}
-      Issue Description: {{ inputs.issue_body }}
+      Issue Title: {issue_title}
+      Issue Description: {issue_body}
       
-      User @{{ inputs.commenter_username }} commented:
-      {{ inputs.comment_body }}
+      User @{commenter_username} commented:
+      {comment_body}
       
       Your task: Determine if this comment indicates the user wants to be assigned to work on this issue.
       
@@ -88,44 +96,46 @@ tasks:
       )
       
       decision = response.choices[0].message.content.strip().upper()
-      print(decision)
+      Kestra.outputs({'decision': decision})
 
   - id: route_decision
     type: io.kestra.plugin.core.flow.Switch
-    value: "{{ outputs.analyze_intent.outputs.out | trim | upper }}"
+    value: "{{ outputs.analyze_intent.vars.decision }}"
     cases:
       ACCEPT:
         - id: assign_issue
           type: io.kestra.plugin.core.http.Request
-          uri: "{{ inputs.backend_api_url }}/api/repositories/{{ inputs.owner }}/{{ inputs.repo }}/issues/{{ inputs.issue_number }}/assign"
+          uri: "{{ trigger.body.backend_api_url }}/api/repositories/{{ trigger.body.owner }}/{{ trigger.body.repo }}/issues/{{ trigger.body.issue_number }}/assign"
           method: POST
-          headers:
-            Content-Type: application/json
+          contentType: application/json
           body: |
             {
-              "assignee": "{{ inputs.commenter_username }}",
-              "githubToken": "{{ inputs.github_token }}"
+              "assignee": "{{ trigger.body.commenter_username }}",
+              "githubToken": "{{ trigger.body.github_token }}"
             }
       
       REJECT:
         - id: request_more_details
           type: io.kestra.plugin.core.http.Request
-          uri: "{{ inputs.backend_api_url }}/api/repositories/{{ inputs.owner }}/{{ inputs.repo }}/issues/{{ inputs.issue_number }}/comment"
+          uri: "{{ trigger.body.backend_api_url }}/api/repositories/{{ trigger.body.owner }}/{{ trigger.body.repo }}/issues/{{ trigger.body.issue_number }}/comment"
           method: POST
-          headers:
-            Content-Type: application/json
+          contentType: application/json
           body: |
             {
-              "comment": "@{{ inputs.commenter_username }} Thanks for your interest in working on this issue! 🙌\n\nTo help ensure successful assignment, could you please provide a brief explanation of your proposed approach to solving this issue? This helps us match contributors with tasks they're well-prepared for.\n\nFor example:\n- What changes do you plan to make?\n- Which files or components will you modify?\n- Any technical details about your solution?\n\nLooking forward to your response!",
-              "githubToken": "{{ inputs.github_token }}"
+              "comment": "@{{ trigger.body.commenter_username }} Thanks for your interest in working on this issue! 🙌\n\nTo help ensure successful assignment, could you please provide a brief explanation of your proposed approach to solving this issue? This helps us match contributors with tasks they're well-prepared for.\n\nFor example:\n- What changes do you plan to make?\n- Which files or components will you modify?\n- Any technical details about your solution?\n\nLooking forward to your response!",
+              "githubToken": "{{ trigger.body.github_token }}",
+              "targetUsername": "{{ trigger.body.commenter_username }}"
             }
       
       IGNORE:
         - id: log_ignored
           type: io.kestra.plugin.core.log.Log
-          message: "Comment from @{{ inputs.commenter_username }} was informational, no assignment action needed"
+          message: "Comment from @{{ trigger.body.commenter_username }} was informational, no assignment action needed"
 
 triggers:
   - id: webhook
     type: io.kestra.plugin.core.trigger.Webhook
     key: "{{ secret('WEBHOOK_SECRET_KEY') }}"
+    conditions:
+      - type: io.kestra.plugin.core.condition.ExpressionCondition
+        expression: "{{ trigger.body.commenter_username != null and trigger.body.github_token != null }}"

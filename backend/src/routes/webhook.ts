@@ -75,12 +75,22 @@ async function handleIssueComment(payload: any) {
         title: true,
         body: true,
         githubToken: true,
+        allowMultipleAssignees: true,
       },
     });
     
     if (!automatedIssue) {
       console.log(`[WEBHOOK] Issue #${issueNumber} is not automated, skipping.`);
       return;
+    }
+    
+    // Check if issue already has assignees
+    if (issue.assignees && issue.assignees.length > 0) {
+      if (!automatedIssue.allowMultipleAssignees) {
+        console.log(`[WEBHOOK] Issue #${issueNumber} already assigned and multiple assignees not allowed, skipping`);
+        return;
+      }
+      console.log(`[WEBHOOK] Issue #${issueNumber} already assigned but multiple assignees allowed, continuing`);
     }
     
     console.log(`[WEBHOOK] Issue #${issueNumber} is automated! Forwarding to Kestra...`);
