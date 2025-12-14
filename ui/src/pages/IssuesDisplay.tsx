@@ -128,16 +128,25 @@ function IssuesDisplay() {
     }
   }
 
-  function extractPriority(body: string): string {
-    // Try multiple patterns: "- Priority Level: HIGH", "Priority Level: HIGH", "**Priority Level**: HIGH"
+  function extractPriority(issue: Issue): string {
+    // Priority is the last tag in the array (high/medium/low)
+    const severityTags = issue.tags.filter(tag => 
+      ['high', 'medium', 'low'].includes(tag.toLowerCase())
+    );
+    
+    if (severityTags.length > 0) {
+      return severityTags[severityTags.length - 1].toUpperCase();
+    }
+    
+    // Fallback: Try to extract from body
     const patterns = [
-      /-?\s*Priority\s+Level[:\s]+(HIGH|MEDIUM|LOW)/i,
-      /\*\*Priority\s+Level\*\*[:\s]+(HIGH|MEDIUM|LOW)/i,
-      /Priority[:\s]+(HIGH|MEDIUM|LOW)/i,
+      /-?\s*\*\*Severity\*\*[:\s]+(HIGH|MEDIUM|LOW)/i,
+      /\*\*Severity\*\*[:\s]+(HIGH|MEDIUM|LOW)/i,
+      /Severity[:\s]+(HIGH|MEDIUM|LOW)/i,
     ];
     
     for (const pattern of patterns) {
-      const match = body.match(pattern);
+      const match = issue.body.match(pattern);
       if (match && match[1]) {
         return match[1].toUpperCase();
       }
@@ -146,16 +155,25 @@ function IssuesDisplay() {
     return "MEDIUM";
   }
 
-  function extractType(body: string): string {
-    // Try multiple patterns: "- Type: security", "Type: security", "**Type**: security"
+  function extractType(issue: Issue): string {
+    // Type is typically the first tag (security, bug, performance, code-quality)
+    const typeTags = issue.tags.filter(tag => 
+      ['security', 'bug', 'performance', 'code-quality', 'review'].includes(tag.toLowerCase())
+    );
+    
+    if (typeTags.length > 0) {
+      return typeTags[0].toLowerCase();
+    }
+    
+    // Fallback: Try to extract from body
     const patterns = [
-      /-?\s*Type[:\s]+(\w+)/i,
+      /-?\s*\*\*Type\*\*[:\s]+(\w+)/i,
       /\*\*Type\*\*[:\s]+(\w+)/i,
-      /##\s+Type\s*\n(.*?)\n/i,
+      /Type[:\s]+(\w+)/i,
     ];
     
     for (const pattern of patterns) {
-      const match = body.match(pattern);
+      const match = issue.body.match(pattern);
       if (match && match[1]) {
         return match[1].trim().toLowerCase();
       }
@@ -224,7 +242,7 @@ function IssuesDisplay() {
         // Filter issues by priority
         const filteredIssues = result.issues.filter((issue) => {
           if (priorityFilter === "all") return true;
-          const priority = extractPriority(issue.body);
+          const priority = extractPriority(issue);
           return priority === priorityFilter.toUpperCase();
         });
 
@@ -325,11 +343,7 @@ function IssuesDisplay() {
           </Card>
 
           <div className="space-y-6">
-            {analysis.results.map((result, fileIndex) => {
-              if (result.status !== "success" || result.issues.length === 0) {
-                return null;
-              }
-
+            {filteredResults.map((result, fileIndex) => {
               return (
                 <Card key={fileIndex} className="glass-card">
                   <CardHeader>
@@ -348,8 +362,8 @@ function IssuesDisplay() {
                   <CardContent>
                     <div className="space-y-4">
                       {result.issues.map((issue, issueIndex) => {
-                        const priority = extractPriority(issue.body);
-                        const type = extractType(issue.body);
+                        const priority = extractPriority(issue);
+                        const type = extractType(issue);
                         const globalIndex = fileIndex * 1000 + issueIndex;
                         const isCreating = creatingIssues.has(globalIndex);
                         const isCreated = createdIssues.has(globalIndex);

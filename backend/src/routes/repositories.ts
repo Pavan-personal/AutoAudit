@@ -192,14 +192,14 @@ async function executeAIAnalysis(prompt: string, timeout: number = 300000, useJs
         max_tokens: 16000,
       };
 
-      // Enable JSON mode for structured output
-      if (useJsonMode) {
+      // Only enable JSON mode for OpenAI API (Vercel Gateway doesn't support response_format)
+      if (useJsonMode && !useVercelGateway) {
         requestBody.response_format = { type: "json_object" };
       }
 
       // Log prompt size for debugging
       const promptLength = prompt.length;
-      console.log(`Prompt size: ${promptLength} characters, JSON mode: ${useJsonMode}`);
+      console.log(`Prompt size: ${promptLength} characters, JSON mode: ${useJsonMode && !useVercelGateway}`);
 
       const response = await axios.post(
         `${baseURL}/chat/completions`,
