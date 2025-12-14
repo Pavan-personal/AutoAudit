@@ -166,6 +166,8 @@ function IssuesDisplay() {
 
   function parseMarkdown(text: string): string {
     return text
+      // Remove bullet points (•) from start of lines
+      .replace(/^[•\-\*]\s+/gm, "")
       // Headers
       .replace(/###\s+(.*?)(?=\n|$)/g, "<h3 class='text-base font-bold mt-3 mb-2'>$1</h3>")
       .replace(/##\s+(.*?)(?=\n|$)/g, "<h2 class='text-lg font-bold mt-4 mb-2'>$1</h2>")
@@ -180,10 +182,10 @@ function IssuesDisplay() {
         const code = match.replace(/```[\w]*\n?/g, "").trim();
         return `<pre class='bg-secondary p-2 rounded overflow-x-auto my-2'><code class='text-xs'>${code}</code></pre>`;
       })
-      // Ordered lists
-      .replace(/^\d+\.\s+(.*?)$/gm, "<li class='ml-4 mb-1 list-decimal'>$1</li>")
-      // Unordered lists (lines starting with -)
-      .replace(/^-\s+(.*?)$/gm, "<li class='ml-4 mb-1 list-disc'>$1</li>")
+      // Ordered lists (remove list styling, just show content)
+      .replace(/^\d+\.\s+(.*?)$/gm, "<div class='mb-1.5'>$1</div>")
+      // Unordered lists (remove bullet, just show content with optimal spacing)
+      .replace(/^-\s+(.*?)$/gm, "<div class='mb-1.5'>$1</div>")
       // Paragraphs (double newlines)
       .replace(/\n\n/g, "</p><p class='mb-2'>")
       // Single newlines
@@ -358,12 +360,12 @@ function IssuesDisplay() {
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
                                   <div 
-                                    className="text-lg font-semibold mb-2"
+                                    className="text-lg font-semibold mb-4"
                                     dangerouslySetInnerHTML={{
                                       __html: parseMarkdown(issue.title)
                                     }}
                                   />
-                                  <div className="flex items-center gap-2 flex-wrap mt-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
                                     <Badge
                                       variant={
                                         priority === "HIGH"

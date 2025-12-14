@@ -157,7 +157,7 @@ async function getGitHubToken(req: Request): Promise<string | null> {
   return user?.githubToken || null;
 }
 
-async function executeCline(prompt: string, timeout: number = 300000): Promise<{ stdout: string; stderr: string }> {
+async function executeAIAnalysis(prompt: string, timeout: number = 300000, useJsonMode: boolean = false): Promise<{ stdout: string; stderr: string }> {
   try {
     // Prioritize Vercel AI Gateway, fallback to OpenAI API
     const useVercelGateway = !!VERCEL_AI_GATEWAY_API_KEY;
@@ -173,26 +173,33 @@ async function executeCline(prompt: string, timeout: number = 300000): Promise<{
       throw new Error("Either VERCEL_AI_GATEWAY_API_KEY or OPENAI_API_KEY must be configured");
     }
 
-    console.log(`Using ${useVercelGateway ? "Vercel AI Gateway" : "OpenAI API"} (Cline-compatible)`);
+    console.log(`Using ${useVercelGateway ? "Vercel AI Gateway" : "OpenAI API"} for AI analysis`);
 
     try {
+      const requestBody: any = {
+        model: model,
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert code security and quality analyzer. Focus on finding REAL, actionable issues in code. Be specific and reference actual code patterns.",
+          },
+          {
+            role: "user",
+            content: prompt,
+          },
+        ],
+        temperature: 0.2,
+        max_tokens: 16000,
+      };
+
+      // Enable JSON mode for structured output
+      if (useJsonMode) {
+        requestBody.response_format = { type: "json_object" };
+      }
+
       const response = await axios.post(
         `${baseURL}/chat/completions`,
-        {
-          model: model,
-          messages: [
-            {
-              role: "system",
-              content: "You are OPEN AI, an expert AI coding assistant. Analyze code thoroughly and provide detailed, actionable feedback. Format your responses clearly and professionally.",
-            },
-            {
-              role: "user",
-              content: prompt,
-            },
-          ],
-          temperature: 0.7,
-          max_tokens: 4000,
-        },
+        requestBody,
         {
           headers: {
             "Authorization": `Bearer ${apiKey}`,
@@ -212,23 +219,29 @@ async function executeCline(prompt: string, timeout: number = 300000): Promise<{
         if (useVercelGateway && OPENAI_API_KEY && (errorMsg.includes("credit card") || errorMsg.includes("401") || errorMsg.includes("403"))) {
           console.log(`Vercel AI Gateway failed, falling back to OpenAI API: ${errorMsg}`);
           try {
+            const fallbackBody: any = {
+              model: "gpt-4o-mini",
+              messages: [
+                {
+                  role: "system",
+                  content: "You are an expert code security and quality analyzer. Focus on finding REAL, actionable issues in code. Be specific and reference actual code patterns.",
+                },
+                {
+                  role: "user",
+                  content: prompt,
+                },
+              ],
+              temperature: 0.2,
+              max_tokens: 16000,
+            };
+            
+            if (useJsonMode) {
+              fallbackBody.response_format = { type: "json_object" };
+            }
+
             const fallbackResponse = await axios.post(
               "https://api.openai.com/v1/chat/completions",
-              {
-                model: "gpt-4o-mini",
-                messages: [
-                  {
-                    role: "system",
-                    content: "You are OpenAI, an expert AI coding assistant. Analyze code thoroughly and provide detailed, actionable feedback. Format your responses clearly and professionally.",
-                  },
-                  {
-                    role: "user",
-                    content: prompt,
-                  },
-                ],
-                temperature: 0.7,
-                max_tokens: 4000,
-              },
+              fallbackBody,
               {
                 headers: {
                   "Authorization": `Bearer ${OPENAI_API_KEY}`,
@@ -253,11 +266,11 @@ async function executeCline(prompt: string, timeout: number = 300000): Promise<{
     if (error instanceof Error) {
       throw error;
     }
-    throw new Error("Unknown error in Cline execution");
+    throw new Error("Unknown error in AI analysis execution");
   }
 }
 
-function parseClineIssuesOutput(output: string, files: Array<{ path: string; content: string }>): {
+function parseAIIssuesOutput(output: string, files: Array<{ path: string; content: string }>): {
   summary: {
     total_files: number;
     total_issues: number;
@@ -274,7 +287,7 @@ function parseClineIssuesOutput(output: string, files: Array<{ path: string; con
   }>;
 } {
   if (!output || output.trim().length === 0) {
-    throw new Error("Cline returned empty output - analysis may have failed");
+    throw new Error("AI analysis returned empty output - analysis may have failed");
   }
 
   const lowerOutput = output.toLowerCase();
@@ -291,7 +304,7 @@ function parseClineIssuesOutput(output: string, files: Array<{ path: string; con
   if (lowerOutput.includes("error") && (lowerOutput.includes("failed") || lowerOutput.includes("cannot") || lowerOutput.includes("unable"))) {
     const errorMatch = output.match(/(?:error|failed|cannot|unable)[:\s]+([^\n]+)/i);
     if (errorMatch && !lowerOutput.includes("issue") && !lowerOutput.includes("bug")) {
-      throw new Error(`Cline execution failed: ${errorMatch[1].substring(0, 150)}`);
+      throw new Error(`AI analysis execution failed: ${errorMatch[1].substring(0, 150)}`);
     }
   }
 
@@ -408,7 +421,7 @@ function parseClineIssuesOutput(output: string, files: Array<{ path: string; con
         if (relevantOutput.length > 50) {
           fileIssues.push({
             title: `Analysis findings for ${fileName}`,
-            body: `Cline AI analysis for ${file.path}:\n\n${relevantOutput}`,
+            body: `AI analysis for ${file.path}:\n\n${relevantOutput}`,
             tags: extractTags(relevantOutput),
           });
           totalIssues++;
@@ -466,11 +479,11 @@ function extractTags(text: string): string[] {
   return tags.length > 0 ? tags : ["review"];
 }
 
-function parseClinePRScore(output: string): { score: number; reasoning: string; recommendations: string[]; analysis: string } {
+function parseAIPRScore(output: string): { score: number; reasoning: string; recommendations: string[]; analysis: string } {
   const lowerOutput = output.toLowerCase();
   
   if (!output || output.trim().length === 0) {
-    throw new Error("Cline returned empty output");
+    throw new Error("AI analysis returned empty output");
   }
 
   if (lowerOutput.includes("npm error") || 
@@ -479,13 +492,13 @@ function parseClinePRScore(output: string): { score: number; reasoning: string; 
       lowerOutput.includes("syscall") ||
       lowerOutput.includes("invalid response body") ||
       lowerOutput.includes("no such file or directory")) {
-    throw new Error(`Cline execution failed with npm error: ${output.substring(0, 200)}`);
+    throw new Error(`AI analysis execution failed with npm error: ${output.substring(0, 200)}`);
   }
 
   if (lowerOutput.includes("error") && (lowerOutput.includes("failed") || lowerOutput.includes("cannot"))) {
     const errorMatch = output.match(/error[:\s]+([^\n]+)/i);
     if (errorMatch) {
-      throw new Error(`Cline execution failed: ${errorMatch[1]}`);
+      throw new Error(`AI analysis execution failed: ${errorMatch[1]}`);
     }
   }
 
@@ -1691,7 +1704,150 @@ async function fetchAllRepoFiles(owner: string, repo: string, token: string, bas
   return files;
 }
 
+// Add missing analyze-cline endpoint that frontend is calling
 router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) => {
+  // Forward to analyze-full-scan handler
+  req.params.owner = req.params.owner;
+  req.params.repo = req.params.repo;
+  const { files, userPrompt, scanEntireRepo } = req.body;
+
+  if (!OPENAI_API_KEY) {
+    res.status(500).json({ error: "OPENAI_API_KEY not configured" });
+    return;
+  }
+
+  const token = await getGitHubToken(req);
+  if (!token) {
+    res.status(401).json({ error: "Not authenticated" });
+    return;
+  }
+
+  let filesToAnalyze: Array<{ path: string; content: string }> = [];
+
+  if (scanEntireRepo) {
+    console.log(`Full repository scan requested for ${req.params.owner}/${req.params.repo}`);
+    filesToAnalyze = await fetchAllRepoFiles(req.params.owner, req.params.repo, token);
+    console.log(`Fetched ${filesToAnalyze.length} files from repository`);
+  } else {
+    if (!files || !Array.isArray(files) || files.length === 0) {
+      res.status(400).json({ error: "No files provided for analysis" });
+      return;
+    }
+    filesToAnalyze = files;
+    console.log(`AI analysis requested for ${req.params.owner}/${req.params.repo}, ${files.length} file(s)`);
+  }
+
+  if (filesToAnalyze.length === 0) {
+    res.status(400).json({ error: "No files found to analyze" });
+    return;
+  }
+
+  // Process in batches for better results
+  const batchSize = 10;
+  const allResults: Array<{ file: string; status: string; issues: Array<{ title: string; body: string; tags: string[] }> }> = [];
+  let totalIssuesFound = 0;
+
+  try {
+    for (let i = 0; i < filesToAnalyze.length; i += batchSize) {
+      const batch = filesToAnalyze.slice(i, i + batchSize);
+      console.log(`Processing batch ${Math.floor(i / batchSize) + 1}/${Math.ceil(filesToAnalyze.length / batchSize)}`);
+
+      // Build prompt with ACTUAL file contents
+      const filesContent = batch.map(f => {
+        const truncatedContent = f.content.substring(0, 8000); // Limit to prevent token overflow
+        return `### File: ${f.path}
+\`\`\`
+${truncatedContent}
+\`\`\``;
+      }).join('\n\n');
+
+      const prompt = `Analyze the following ${batch.length} files for bugs, security vulnerabilities, and code quality issues.
+
+${filesContent}
+
+Return your analysis as a JSON object with this exact structure:
+{
+  "files": [
+    {
+      "path": "exact/file/path.ext",
+      "issues": [
+        {
+          "title": "Brief issue title",
+          "severity": "HIGH" | "MEDIUM" | "LOW",
+          "type": "security" | "bug" | "performance" | "code-quality",
+          "description": "Detailed description with specific code references",
+          "line": 42
+        }
+      ]
+    }
+  ]
+}
+
+IMPORTANT:
+- Only report REAL issues you can see in the actual code
+- Be specific - reference actual functions, variables, or patterns
+- If a file has no issues, include it with an empty issues array
+- Focus on actionable problems
+${userPrompt ? `\n- Additional instructions: ${userPrompt}` : ''}`;
+
+      const { stdout } = await executeAIAnalysis(prompt, 300000, true);
+
+      try {
+        const batchResult = JSON.parse(stdout);
+        if (batchResult.files && Array.isArray(batchResult.files)) {
+          for (const fileResult of batchResult.files) {
+            const issues = (fileResult.issues || []).map((issue: any) => ({
+              title: issue.title || 'Code Issue',
+              body: `**Severity:** ${issue.severity || 'MEDIUM'}
+**Type:** ${issue.type || 'code-quality'}
+${issue.line ? `**Line:** ${issue.line}
+` : ''}
+${issue.description || 'No description provided'}`,
+              tags: [issue.type || 'review', issue.severity?.toLowerCase() || 'medium']
+            }));
+            
+            allResults.push({
+              file: fileResult.path,
+              status: 'success',
+              issues: issues
+            });
+            
+            totalIssuesFound += issues.length;
+          }
+        }
+      } catch (parseError) {
+        console.error('Failed to parse JSON response for batch:', parseError);
+        // Fallback to text parsing for this batch
+        const textResults = parseAIIssuesOutput(stdout, batch);
+        allResults.push(...textResults.results);
+        totalIssuesFound += textResults.summary.total_issues;
+      }
+
+      // Small delay between batches to avoid rate limits
+      if (i + batchSize < filesToAnalyze.length) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    res.json({
+      summary: {
+        total_files: filesToAnalyze.length,
+        total_issues: totalIssuesFound,
+        files_with_issues: allResults.filter(r => r.issues.length > 0).length,
+      },
+      results: allResults,
+    });
+  } catch (error: unknown) {
+    console.error('Error in AI analysis:', error);
+    if (error instanceof Error) {
+      res.status(500).json({ error: `AI analysis failed: ${error.message}` });
+    } else {
+      res.status(500).json({ error: 'Internal server error during AI analysis' });
+    }
+  }
+});
+
+router.post("/:owner/:repo/analyze-full-scan", async (req: Request, res: Response) => {
   try {
     const owner = req.params.owner;
     const repo = req.params.repo;
@@ -1711,7 +1867,7 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
     let filesToAnalyze: Array<{ path: string; content: string }> = [];
 
     if (scanEntireRepo) {
-      console.log(`Cline full repository scan requested for ${owner}/${repo}`);
+      console.log(`Full repository scan requested for ${owner}/${repo}`);
       filesToAnalyze = await fetchAllRepoFiles(owner, repo, token);
       console.log(`Fetched ${filesToAnalyze.length} files from repository`);
     } else {
@@ -1720,7 +1876,7 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
         return;
       }
       filesToAnalyze = files;
-      console.log(`Cline analysis requested for ${owner}/${repo}, ${files.length} file(s)`);
+      console.log(`AI analysis requested for ${owner}/${repo}, ${files.length} file(s)`);
     }
 
     if (filesToAnalyze.length === 0) {
@@ -1728,7 +1884,7 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
       return;
     }
 
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cline-analysis-"));
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-analysis-"));
     
     try {
       for (const file of filesToAnalyze) {
@@ -1780,32 +1936,32 @@ IMPORTANT:
 
 Format each issue clearly. Focus on actionable, specific problems.`;
 
-      console.log("Executing Cline analysis...");
-      const { stdout, stderr } = await executeCline(prompt, 600000);
+      console.log("Executing AI analysis...");
+      const { stdout, stderr } = await executeAIAnalysis(prompt, 600000);
 
       const analysisOutput = stdout || stderr || "";
       
       if (!analysisOutput || analysisOutput.trim().length === 0) {
-        throw new Error("Cline analysis returned empty response - Cline may not have executed properly");
+        throw new Error("AI analysis returned empty response - analysis may not have executed properly");
       }
 
       if (stderr && stderr.includes("npm error") && !stdout) {
-        throw new Error(`Cline installation failed: ${stderr.substring(0, 300)}. This is likely a disk space or npm configuration issue in the serverless environment.`);
+        throw new Error(`AI analysis failed: ${stderr.substring(0, 300)}. This is likely a disk space or npm configuration issue in the serverless environment.`);
       }
 
       try {
-        const analysisResult = parseClineIssuesOutput(analysisOutput, filesToAnalyze);
+        const analysisResult = parseAIIssuesOutput(analysisOutput, filesToAnalyze);
         
         if (analysisResult.summary.total_issues === 0 && analysisOutput.length > 100) {
-          console.warn("Cline returned output but parsed 0 issues - this may indicate a parsing issue or Cline didn't find issues");
+          console.warn("AI returned output but parsed 0 issues - this may indicate a parsing issue or no issues were found");
         }
         
         res.json(analysisResult);
       } catch (parseError) {
-        if (parseError instanceof Error && parseError.message.includes("Cline execution failed")) {
+        if (parseError instanceof Error && parseError.message.includes("AI analysis execution failed")) {
           throw parseError;
         }
-        throw new Error(`Failed to parse Cline output: ${parseError instanceof Error ? parseError.message : "Unknown error"}. Raw output: ${analysisOutput.substring(0, 500)}`);
+        throw new Error(`Failed to parse AI analysis output: ${parseError instanceof Error ? parseError.message : "Unknown error"}. Raw output: ${analysisOutput.substring(0, 500)}`);
       }
     } finally {
       try {
@@ -1815,11 +1971,11 @@ Format each issue clearly. Focus on actionable, specific problems.`;
       }
     }
   } catch (error: unknown) {
-    console.error("Error in Cline analysis:", error);
+    console.error("Error in AI analysis:", error);
     if (error instanceof Error) {
-      res.status(500).json({ error: `Cline analysis failed: ${error.message}` });
+      res.status(500).json({ error: `AI analysis failed: ${error.message}` });
     } else {
-      res.status(500).json({ error: "Internal server error during Cline analysis" });
+      res.status(500).json({ error: "Internal server error during AI analysis" });
     }
   }
 });
@@ -2021,11 +2177,11 @@ IMPORTANT: The score you provide here (XX) MUST be the same score you calculate 
 
 CRITICAL: The score in "Merge Readiness Score: **XX/100**" MUST match the actual calculated score based on all factors. Do NOT provide conflicting scores.`;
 
-    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cline-pr-analysis-"));
+    const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "ai-pr-analysis-"));
     
     try {
-      console.log(`Executing Cline PR analysis for PR #${prNumber}...`);
-      const { stdout, stderr } = await executeCline(analysisPrompt, 300000);
+      console.log(`Executing AI PR analysis for PR #${prNumber}...`);
+      const { stdout, stderr } = await executeAIAnalysis(analysisPrompt, 300000);
 
       const analysisOutput = stdout || stderr || "";
       
@@ -2034,17 +2190,17 @@ CRITICAL: The score in "Merge Readiness Score: **XX/100**" MUST match the actual
       }
 
       if (stderr && stderr.includes("npm error") && !stdout) {
-        throw new Error(`Cline installation failed: ${stderr.substring(0, 300)}. This is likely a disk space or npm configuration issue in the serverless environment.`);
+        throw new Error(`AI analysis failed: ${stderr.substring(0, 300)}. This is likely a disk space or npm configuration issue in the serverless environment.`);
       }
 
       let scoreResult;
       try {
-        scoreResult = parseClinePRScore(analysisOutput);
+        scoreResult = parseAIPRScore(analysisOutput);
       } catch (parseError) {
         if (parseError instanceof Error && parseError.message.includes("Open AI execution failed")) {
           throw parseError;
         }
-        throw new Error(`Failed to parse Open AI PR analysis: ${parseError instanceof Error ? parseError.message : "Unknown error"}. Raw output: ${analysisOutput.substring(0, 500)}`);
+        throw new Error(`Failed to parse AI PR analysis: ${parseError instanceof Error ? parseError.message : "Unknown error"}. Raw output: ${analysisOutput.substring(0, 500)}`);
       }
 
       // Calculate score from sub-scores in analysis (e.g., (15/20), (10/10))

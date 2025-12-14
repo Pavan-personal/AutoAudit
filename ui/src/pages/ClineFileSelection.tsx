@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Loader2, Sparkles, Scan } from "lucide-react";
+import { ArrowLeft, Loader2, Sparkles, Scan, CheckCircle2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +20,8 @@ function ClineFileSelection() {
   const [error, setError] = useState<string | null>(null);
   const [showPromptDialog, setShowPromptDialog] = useState(false);
   const [userPrompt, setUserPrompt] = useState("");
+  const [progress, setProgress] = useState(0);
+  const [statusMessage, setStatusMessage] = useState("");
   const navigate = useNavigate();
   const API_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
 
@@ -36,10 +38,31 @@ function ClineFileSelection() {
     setAnalyzing(true);
     setError(null);
     setShowPromptDialog(false);
+    setProgress(0);
+    setStatusMessage("Fetching repository files...");
 
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 600000);
+
+      // Simulate progress for better UX
+      const progressInterval = setInterval(() => {
+        setProgress(prev => {
+          if (prev >= 90) return prev; // Cap at 90% until complete
+          return prev + Math.random() * 15;
+        });
+      }, 2000);
+
+      // Update status messages
+      setTimeout(() => setStatusMessage("Analyzing files with AI..."), 3000);
+      setTimeout(() => setStatusMessage("Processing batch 1/8..."), 8000);
+      setTimeout(() => setStatusMessage("Processing batch 2/8..."), 20000);
+      setTimeout(() => setStatusMessage("Processing batch 3/8..."), 35000);
+      setTimeout(() => setStatusMessage("Processing batch 4/8..."), 50000);
+      setTimeout(() => setStatusMessage("Processing batch 5/8..."), 65000);
+      setTimeout(() => setStatusMessage("Processing batch 6/8..."), 80000);
+      setTimeout(() => setStatusMessage("Processing batch 7/8..."), 95000);
+      setTimeout(() => setStatusMessage("Finalizing results..."), 110000);
 
       const analysisResponse = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/analyze-cline`, {
         method: "POST",
@@ -55,6 +78,9 @@ function ClineFileSelection() {
       });
 
       clearTimeout(timeoutId);
+      clearInterval(progressInterval);
+      setProgress(100);
+      setStatusMessage("Analysis complete!");
 
       if (!analysisResponse.ok) {
         const errorData = await analysisResponse.json().catch(() => ({}));
@@ -85,6 +111,8 @@ function ClineFileSelection() {
         });
       }
       setAnalyzing(false);
+      setProgress(0);
+      setStatusMessage("");
     }
   }
 
@@ -172,10 +200,37 @@ function ClineFileSelection() {
                   </Button>
                 </div>
                 {analyzing && (
-                  <div className="text-center py-4">
-                    <p className="text-sm text-muted-foreground">
-                      This may take several minutes depending on repository size...
-                    </p>
+                  <div className="space-y-4 py-4">
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center text-sm">
+                        <div className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                          <span className="text-foreground font-medium">{statusMessage}</span>
+                        </div>
+                        <span className="text-primary font-bold">{Math.round(progress)}%</span>
+                      </div>
+                      <div className="relative w-full bg-secondary rounded-full h-3 overflow-hidden border border-border">
+                        <div 
+                          className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-500 ease-out shadow-lg"
+                          style={{ width: `${progress}%` }}
+                        >
+                          <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-primary/5 border border-primary/20 p-3">
+                      <div className="flex items-start gap-2">
+                        <Sparkles className="w-4 h-4 text-primary mt-0.5 flex-shrink-0" />
+                        <div className="space-y-1">
+                          <p className="text-xs font-medium text-foreground">
+                            AI is analyzing your code in batches for optimal quality
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            We process files in groups to ensure accurate issue detection with specific code references
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
