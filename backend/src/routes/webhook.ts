@@ -48,6 +48,12 @@ async function handleIssueComment(payload: any) {
     const repo = repository.name;
     const issueNumber = issue.number;
     
+    // Ignore comments from bots to prevent infinite loops
+    if (comment.user.type === "Bot" || comment.user.login.includes("[bot]")) {
+      console.log(`[WEBHOOK] Ignoring bot comment from ${comment.user.login}`);
+      return;
+    }
+    
     console.log(`[WEBHOOK] Checking if issue #${issueNumber} is automated...`);
     
     // Check if this issue is in our automated issues table
