@@ -61,6 +61,18 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 2. **Assign** - Contributor comments → AI analyzes intent → Auto-assigns if qualified
 3. **Review** - PR created → AI scores merge readiness → Confidence-based merging
 
+### Code review by Oumi (select upto 5 files)
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 45 50 PM" src="https://github.com/user-attachments/assets/02c03c11-84e2-43b5-a44f-f15336696f40" />
+
+### Select Files
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 47 06 PM" src="https://github.com/user-attachments/assets/afa63c94-efd0-4fc8-98e8-5b27b670b3e8" />
+
+### Oumi inference API giving list of issues as response
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 50 32 PM" src="https://github.com/user-attachments/assets/b87f8b18-9814-4b93-982f-36f845074c27" />
+
 ### PR Analysis page
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 51 10 PM" src="https://github.com/user-attachments/assets/ee8a0228-6081-4420-9d70-24ab06f1c7ad" />
