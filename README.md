@@ -1,12 +1,24 @@
-# AutoAudit 🚀
+# AutoAudit
 
 AI-powered GitHub workflow automation that scans codebases, assigns issues intelligently, and reviews PRs automatically.
+
+<br />
+
+<img width="1462" height="826" alt="Screenshot 2025-12-14 at 10 37 06 PM" src="https://github.com/user-attachments/assets/2b7f722e-45fe-4a21-a554-efb2ae639548" />
+
+<br /><br />
 
 ## Features
 
 - **Deep Codebase Scanning** - Oumi AI analyzes repositories for security vulnerabilities, performance issues, and code quality problems
 - **Smart Issue Assignment** - AI analyzes contributor comments and auto-assigns qualified developers
 - **AI PR Review** - Merge readiness scoring based on code quality, security, and best practices
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 11 13 00 PM" src="https://github.com/user-attachments/assets/866d1665-3cae-4aa0-b1a2-acdbfa00a837" />
+
+<br /><br />
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 11 13 19 PM" src="https://github.com/user-attachments/assets/1b3a096e-c2ab-4db4-875b-bf4bb9f0903e" />
 
 ## Tech Stack
 
