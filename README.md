@@ -61,8 +61,6 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 2. **Assign** - Contributor comments → AI analyzes intent → Auto-assigns if qualified
 3. **Review** - PR created → AI scores merge readiness → Confidence-based merging
 
-
-
 ### PR Analysis page
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 51 10 PM" src="https://github.com/user-attachments/assets/ee8a0228-6081-4420-9d70-24ab06f1c7ad" />
@@ -70,7 +68,6 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 ### Merge Readiness Score
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 51 43 PM" src="https://github.com/user-attachments/assets/09a4610a-c673-454a-b62d-d33462f095f9" />
-
 
 ## Architecture
 
@@ -93,6 +90,10 @@ GitHub → Webhooks → Backend (Vercel) → Kestra (Docker)
 ### Vercel AI Gateway setup
 
 <img width="1470" alt="Screenshot 2025-12-14 at 11 27 14 PM" src="https://github.com/user-attachments/assets/47f95f33-8186-4d68-9c04-26f2243b6ff0" />
+
+### Billings and log history
+
+<img width="1464" height="832" alt="Screenshot 2025-12-14 at 8 19 37 PM" src="https://github.com/user-attachments/assets/4d77f666-40a7-49b2-ae17-d28f97b28e24" />
 
 ### Vercel logs story
 
