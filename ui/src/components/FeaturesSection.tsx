@@ -49,14 +49,14 @@ const features = [
   },
   {
     icon: Bot,
-    title: 'AI-Powered Issue Fixing',
-    subtitle: 'End-to-End Automation',
-    description: 'From issue to merged PR with zero manual intervention. Cline edits code, raises PRs, CodeRabbit reviews, and AutoAudit orchestrates the entire workflow via Kestra.',
+    title: 'AI PR Review',
+    subtitle: 'Merge Readiness Score',
+    description: 'Get instant merge readiness percentage for every PR. AI analyzes code quality, test coverage, security, and best practices to give you confidence before merging.',
     highlights: [
-      'Automated code fixes',
-      'PR creation & review',
-      'Smart merge decisions',
-      'Branch cleanup'
+      'Merge readiness percentage',
+      'Code quality analysis',
+      'Security vulnerability detection',
+      'Best practices validation'
     ],
     badge: 'AI Magic',
     color: 'primary',

@@ -3,7 +3,7 @@ import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { ExternalLink, Puzzle, Github, Rabbit, Zap } from 'lucide-react';
 import OumiSvg from '@/assets/oumi.svg';
-import ClineSvg from '@/assets/cline.svg';
+import VercelSvg from '@/assets/vercel.jsx';
 import KestraSvg from '@/assets/kestra.svg';
 
 gsap.registerPlugin(ScrollTrigger);
@@ -18,12 +18,13 @@ const integrations = [
     isSvg: true
   },
   {
-    name: 'Cline',
-    description: 'AI-powered CLI editor for automated code modifications',
-    role: 'Code Editor',
-    color: '#8B5CF6',
-    icon: ClineSvg,
-    isSvg: true
+    name: 'Vercel',
+    description: 'Cloud platform for seamless deployment and hosting',
+    role: 'Deployment',
+    color: '#000000',
+    icon: VercelSvg,
+    isSvg: true,
+    isComponent: true
   },
   {
     name: 'Kestra',
@@ -134,11 +135,15 @@ const IntegrationsSection = () => {
                 <div className="flex items-start justify-between mb-4">
 
                   {integration.isSvg ? (
-                    <img
-                      src={IconComponent as string}
-                      alt={integration.name}
-                      className={`h-12 ${integration.name === "Kestra" ? "" : 'invert'}`}
-                    />
+                    integration.isComponent ? (
+                      <integration.icon />
+                    ) : (
+                      <img
+                        src={IconComponent as string}
+                        alt={integration.name}
+                        className={`h-12 ${integration.name === "Kestra" ? "" : 'invert'}`}
+                      />
+                    )
                   ) : (
                     <div
                       className="w-14 h-14 rounded-2xl flex items-center justify-center"
