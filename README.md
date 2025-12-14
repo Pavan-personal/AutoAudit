@@ -4,7 +4,7 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 
 <br />
 
-<img width="1462" height="826" alt="Screenshot 2025-12-14 at 10 37 06 PM" src="https://github.com/user-attachments/assets/2b7f722e-45fe-4a21-a554-efb2ae639548" />
+<img width="1470" alt="Screenshot 2025-12-14 at 10 37 06 PM" src="https://github.com/user-attachments/assets/2b7f722e-45fe-4a21-a554-efb2ae639548" />
 
 <br /><br />
 
@@ -32,6 +32,9 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 - Node.js + Express
 - PostgreSQL + Prisma ORM
 - GitHub OAuth & Webhooks
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 11 17 14 PM" src="https://github.com/user-attachments/assets/1761209d-fe3a-4ab7-88a3-0b077d1e5c26" />
+
+
 
 ### AI & Automation
 - **Oumi AI** - Deployed on Hugging Face for codebase scanning
@@ -44,11 +47,30 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 - **AI Model** - Hugging Face
 - **Workflows** - Docker (local) + ngrok
 
+### Dashboard
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 45 33 PM" src="https://github.com/user-attachments/assets/827d3dc7-4d8e-45a6-ad11-60630b6fc8f0" />
+
+### Manosor Grid 
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 45 26 PM" src="https://github.com/user-attachments/assets/7eaa8b05-9cce-4f66-88f4-b1b9718ce327" />
+
 ## How It Works
 
 1. **Scan** - Connect repo → Oumi analyzes codebase → Auto-creates prioritized issues
 2. **Assign** - Contributor comments → AI analyzes intent → Auto-assigns if qualified
 3. **Review** - PR created → AI scores merge readiness → Confidence-based merging
+
+
+
+### PR Analysis page
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 51 10 PM" src="https://github.com/user-attachments/assets/ee8a0228-6081-4420-9d70-24ab06f1c7ad" />
+
+### Merge Readiness Score
+
+<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 51 43 PM" src="https://github.com/user-attachments/assets/09a4610a-c673-454a-b62d-d33462f095f9" />
+
 
 ## Architecture
 
@@ -59,6 +81,10 @@ GitHub → Webhooks → Backend (Vercel) → Kestra (Docker)
                   ↓
          OpenAI (via Vercel AI Gateway)
 ```
+
+
+
+
 
 ## Setup
 
