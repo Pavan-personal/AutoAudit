@@ -1209,6 +1209,7 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
         comments,
         updatedAt,
         autoAssign: true,
+        githubToken: user.githubToken,
       },
       create: {
         repositoryOwner: owner,
@@ -1227,6 +1228,7 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
         updatedAt,
         autoAssign: true,
         userId: userId,
+        githubToken: user.githubToken,
       },
     });
 
