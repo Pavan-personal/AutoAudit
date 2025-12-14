@@ -123,7 +123,8 @@ tasks:
           body: |
             {
               "comment": "@{{ trigger.body.commenter_username }} Thanks for your interest in working on this issue! 🙌\n\nTo help ensure successful assignment, could you please provide a brief explanation of your proposed approach to solving this issue? This helps us match contributors with tasks they're well-prepared for.\n\nFor example:\n- What changes do you plan to make?\n- Which files or components will you modify?\n- Any technical details about your solution?\n\nLooking forward to your response!",
-              "githubToken": "{{ trigger.body.github_token }}"
+              "githubToken": "{{ trigger.body.github_token }}",
+              "targetUsername": "{{ trigger.body.commenter_username }}"
             }
       
       IGNORE:
