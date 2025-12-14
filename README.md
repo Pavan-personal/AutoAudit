@@ -169,7 +169,7 @@ GitHub → Webhooks → Backend (Vercel) → Kestra (Docker)
 ### Kestra setup story (starting with running docker and ngrok instances)
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 8 22 35 PM" src="https://github.com/user-attachments/assets/36387d93-6fd7-408a-af90-bc5e23da8db2" />
 
-### Kestra flow running
+### Kestra flow using Kestra AI agent running 
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 8 20 08 PM" src="https://github.com/user-attachments/assets/4d8e64c6-89a9-44c9-9b38-f32221394a3a" />
 
@@ -179,7 +179,7 @@ GitHub → Webhooks → Backend (Vercel) → Kestra (Docker)
 
 ### Some more Kestra snaps
 
-<img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 52 28 PM" src="https://github.com/user-attachments/assets/6bbde497-224a-4fbb-9ad5-5f6bff9d6dcf" />
+<img width="1470" height="956" alt="Screenshot 2025-12-15 at 1 42 23 AM" src="https://github.com/user-attachments/assets/823756d3-082c-4f7c-8eaf-41c7b240112f" />
 
 #### I initially faced multiple issues while deploying Kestra. Railway ran into memory limits, AWS Free Tier had long verification delays, and Oracle Cloud required a credit card. I finally used a Docker-based setup. Since the deployed URLs weren’t compatible, I used ngrok for port forwarding. This works locally, but anyone else testing it will need their own Kestra + ngrok setup.
 
