@@ -5,6 +5,11 @@ It’s a build log, the journey of creating AutoAudit from zero, the roadblocks 
 
 AI-powered GitHub workflow automation that scans codebases, assigns issues intelligently, and reviews PRs automatically.
 
+### Links
+- [Oumi Model](https://pavannnnnnn-autoaudi-ai-oumi.hf.space)
+- [autoaudit](https://autoauditai.vercel.app)
+- [Backend with Vercel AI gateway support](https://autoauditserver.vercel.app/health)
+
 <br />
 
 <img width="1470" alt="Screenshot 2025-12-14 at 10 37 06 PM" src="https://github.com/user-attachments/assets/2b7f722e-45fe-4a21-a554-efb2ae639548" />
