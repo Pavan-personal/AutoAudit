@@ -3,8 +3,9 @@ import React from "react";
 function vercel() {
   return (
     <svg
-      width="76"
-      height="65"
+      //   width="76"
+      height="56"
+      className="scale-95"
       viewBox="0 0 76 65"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"

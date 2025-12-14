@@ -19,9 +19,9 @@ const integrations = [
   },
   {
     name: 'Vercel',
-    description: 'Cloud platform for seamless deployment and hosting',
+    description: 'Cloud platform and AI gateway for serverless functions',
     role: 'Deployment',
-    color: '#000000',
+    color: 'white',
     icon: VercelSvg,
     isSvg: true,
     isComponent: true
@@ -187,7 +187,7 @@ const IntegrationsSection = () => {
 
           <div className="relative flex flex-wrap justify-center items-center gap-4 lg:gap-8">
             {/* Flow visualization */}
-            {['Oumi', 'AutoAudit', 'Cline', 'CodeRabbit', 'GitHub'].map((tool, i) => (
+            {['Oumi', 'AutoAudit', 'Vercel AI Gateway', 'CodeRabbit', 'GitHub'].map((tool, i) => (
               <div key={i} className="flex items-center gap-4 lg:gap-8">
                 <div className={`px-6 py-3 rounded-xl font-medium ${tool === 'AutoAudit'
                     ? 'bg-gradient-primary text-primary-foreground'

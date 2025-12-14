@@ -1370,32 +1370,32 @@ router.post("/:owner/:repo/issues/:number/comment", async (req: Request, res: Re
 
     // Check if we already commented to THIS specific user to prevent loops
     if (targetUsername) {
-      const commentsResponse = await axios.get(
-        `https://api.github.com/repos/${owner}/${repo}/issues/${number}/comments`,
-        {
-          headers: {
-            Authorization: `Bearer ${githubToken}`,
-            Accept: "application/vnd.github+json",
-            "X-GitHub-Api-Version": "2022-11-28",
-          },
-        }
-      );
+      // const commentsResponse = await axios.get(
+      //   `https://api.github.com/repos/${owner}/${repo}/issues/${number}/comments`,
+      //   {
+      //     headers: {
+      //       Authorization: `Bearer ${githubToken}`,
+      //       Accept: "application/vnd.github+json",
+      //       "X-GitHub-Api-Version": "2022-11-28",
+      //     },
+      //   }
+      // );
 
       // Check if we already asked THIS user for more details
-      const alreadyCommentedToUser = commentsResponse.data.some((c: any) => 
-        c.body && 
-        c.body.includes("Thanks for your interest in working on this issue") &&
-        c.body.includes(`@${targetUsername}`)
-      );
+      // const alreadyCommentedToUser = commentsResponse.data.some((c: any) => 
+      //   c.body && 
+      //   c.body.includes("Thanks for your interest in working on this issue") &&
+      //   c.body.includes(`@${targetUsername}`)
+      // );
 
-      if (alreadyCommentedToUser) {
-        console.log(`[COMMENT] Already asked @${targetUsername} for details on issue #${number}, skipping`);
-        res.json({ 
-          success: false, 
-          message: `Already commented to @${targetUsername}` 
-        });
-        return;
-      }
+      // if (alreadyCommentedToUser) {
+      //   console.log(`[COMMENT] Already asked @${targetUsername} for details on issue #${number}, skipping`);
+      //   res.json({ 
+      //     success: false, 
+      //     message: `Already commented to @${targetUsername}` 
+      //   });
+      //   return;
+      // }
     }
 
     // Call GitHub API to post comment
