@@ -9,6 +9,16 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 
 <img width="1470" alt="Screenshot 2025-12-14 at 10 37 06 PM" src="https://github.com/user-attachments/assets/2b7f722e-45fe-4a21-a554-efb2ae639548" />
 
+### Issue automation live and codescan and github issue creation demo
+
+[![Watch the demo](https://cdn.dribbble.com/userupload/21508690/file/original-bc94311cd15a4e840f4b57bddc73375c.gif)](https://drive.google.com/file/d/1UhYFBKqvOoQ2d9AnHQUuFtwaQyzjBnDt/view?usp=sharing)
+
+#### Watch the above video to see the live demo of Kestra agent automatically whether asking for explanation about the approach to resolve issue or assigning issues to users based on their comments. This also covers the Codebase scan of the user's github repo and listing potential issues on UI, and after single click from dashboard creates github issues directly in their github repo.
+
+### Getting Merge Readiness Score of a Pull request demo
+
+[![Watch the demo](https://cdn.dribbble.com/userupload/21508690/file/original-bc94311cd15a4e840f4b57bddc73375c.gif)](https://drive.google.com/file/d/1Ztdi-Sxh4Iyfxa3g8nOabmQJjzSBnNJo/view)
+
 ## Features
 
 - **Deep Codebase Scanning** - Oumi AI analyzes repositories for security vulnerabilities, performance issues, and code quality problems
