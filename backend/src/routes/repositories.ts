@@ -1353,6 +1353,32 @@ router.post("/:owner/:repo/issues/:number/comment", async (req: Request, res: Re
 
     console.log(`[COMMENT] Posting comment on issue #${number} in ${owner}/${repo}`);
 
+    // Check if we already commented to prevent loops
+    const commentsResponse = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}/issues/${number}/comments`,
+      {
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      }
+    );
+
+    // Check if any comment contains our signature text
+    const alreadyCommented = commentsResponse.data.some((c: any) => 
+      c.body && c.body.includes("Thanks for your interest in working on this issue")
+    );
+
+    if (alreadyCommented) {
+      console.log(`[COMMENT] Already commented on issue #${number}, skipping`);
+      res.json({ 
+        success: false, 
+        message: "Already commented on this issue" 
+      });
+      return;
+    }
+
     // Call GitHub API to post comment
     const response = await axios.post(
       `https://api.github.com/repos/${owner}/${repo}/issues/${number}/comments`,
