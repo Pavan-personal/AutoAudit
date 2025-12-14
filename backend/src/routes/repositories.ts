@@ -551,10 +551,54 @@ function parseClinePRScore(output: string): { score: number; reasoning: string; 
     recommendations.push("Resolve merge conflicts before merging");
   }
 
-  // Extract Analysis section
-  const analysisMatch = output.match(/####?\s*Detailed\s+Analysis[:\s]*\n([\s\S]*?)(?=\n####?\s*|$)/i);
-  if (analysisMatch && analysisMatch[1].trim().length > 20) {
-    analysis = analysisMatch[1].trim();
+  // Extract Analysis section - the analysis is usually the numbered list with scores
+  // Look for patterns like "1. **Code Quality (15/20)**:"
+  const analysisPatterns = [
+    /####?\s*Detailed\s+Analysis[:\s]*\n([\s\S]*?)(?=\n####?\s*(?:Detailed|Recommendations|Reasoning)|$)/i,
+    /##\s+Detailed\s+Analysis[:\s]*\n([\s\S]*?)(?=\n##|$)/i,
+    /Detailed\s+Analysis[:\s]*\n([\s\S]*?)(?=\n(?:Detailed|Recommendations|Reasoning|##)|$)/i,
+  ];
+  
+  for (const pattern of analysisPatterns) {
+    const match = output.match(pattern);
+    if (match && match[1] && match[1].trim().length > 20) {
+      analysis = match[1].trim();
+      break;
+    }
+  }
+  
+  // If no analysis section found, look for numbered list with scores (the actual format)
+  // Pattern: "1. **Code Quality (15/20)**: ..."
+  if (!analysis || analysis.length < 20) {
+    // Find the start of numbered list with scores
+    const numberedListStart = output.search(/\d+\.\s+\*\*.*?\(\d+\/\d+\).*?\*\*:/);
+    if (numberedListStart !== -1) {
+      // Extract from that point until recommendations or end
+      const fromNumberedList = output.substring(numberedListStart);
+      const endMatch = fromNumberedList.match(/([\s\S]*?)(?=\n(?:####?\s*Recommendations|##\s+Recommendations|$))/i);
+      if (endMatch && endMatch[1].trim().length > 20) {
+        analysis = endMatch[1].trim();
+      } else {
+        // Get all numbered items with scores
+        const allNumberedItems = fromNumberedList.match(/\d+\.\s+\*\*.*?\(\d+\/\d+\).*?\*\*:[\s\S]*?(?=\n\d+\.\s+\*\*|$)/g);
+        if (allNumberedItems && allNumberedItems.length > 0) {
+          analysis = allNumberedItems.join("\n\n");
+        }
+      }
+    }
+  }
+  
+  // Final fallback: use the full output (excluding score header and reasoning)
+  if (!analysis || analysis.length < 20) {
+    analysis = output
+      .replace(/##\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/gi, "")
+      .replace(/###\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/gi, "")
+      .replace(/Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/gi, "")
+      .replace(/####?\s*Detailed\s+Reasoning[:\s]*\n[\s\S]*?(?=\n####?\s*|$)/gi, "")
+      .trim();
+    if (analysis.length < 20) {
+      analysis = output.substring(0, 2000);
+    }
   }
 
   // Extract Reasoning section
@@ -1701,40 +1745,40 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
       const moreFiles = fileCount > 10 ? ` and ${fileCount - 10} more files` : "";
       
       const prompt = userPrompt
-        ? `You are analyzing a codebase with ${fileCount} files (${filePaths}${moreFiles}). ${userPrompt}
+        ? `Analyze this codebase (${fileCount} files: ${filePaths}${moreFiles}). ${userPrompt}
 
-CRITICAL REQUIREMENTS:
-- Only report REAL, ACTIONABLE issues found in the actual code
-- Do NOT provide generic templates, examples, or placeholder text
-- Do NOT say "I don't have access to the code" or "provide code snippets"
-- Each issue MUST be specific to the actual file and code you're analyzing
-- Skip files that have no real issues - empty results are fine
-- Do NOT include meta-commentary like "To provide a thorough analysis..." or "I will outline potential issues..."
+Analyze the actual code provided and identify REAL issues. For each issue you find, provide:
 
-For each REAL issue found, provide EXACTLY this format:
-- **File Path**: \`path/to/file.js\` (Line X)
-- **Description**: [Specific issue description based on actual code]
+- **File Path**: \`path/to/file.js\` (Line X if applicable)
+- **Description**: Specific issue description based on the actual code
 - **Priority Level**: HIGH/MEDIUM/LOW
-- **Type**: [bugs/security/performance/architecture]
+- **Type**: bugs/security/performance/architecture/code-quality
 
-Only include issues you can actually identify from the code provided. If a file has no issues, do not create fake issues.`
-        : `You are analyzing a codebase with ${fileCount} files (${filePaths}${moreFiles}).
+IMPORTANT:
+- Only report issues you can actually see in the code
+- Be specific - reference actual code patterns, functions, or lines
+- Do NOT include generic templates or placeholder text
+- Do NOT say "I don't have access" - you have the code
+- If a file has no issues, you can skip it (but still analyze it thoroughly)
 
-CRITICAL REQUIREMENTS:
-- Only report REAL, ACTIONABLE issues found in the actual code
-- Do NOT provide generic templates, examples, or placeholder text
-- Do NOT say "I don't have access to the code" or "provide code snippets"
-- Each issue MUST be specific to the actual file and code you're analyzing
-- Skip files that have no real issues - empty results are fine
-- Do NOT include meta-commentary like "To provide a thorough analysis..." or "I will outline potential issues..."
+Format each issue clearly. Focus on actionable, specific problems.`
+        : `Analyze this codebase (${fileCount} files: ${filePaths}${moreFiles}).
 
-For each REAL issue found, provide EXACTLY this format:
-- **File Path**: \`path/to/file.js\` (Line X)
-- **Description**: [Specific issue description based on actual code]
+Analyze the actual code provided and identify REAL issues. For each issue you find, provide:
+
+- **File Path**: \`path/to/file.js\` (Line X if applicable)
+- **Description**: Specific issue description based on the actual code
 - **Priority Level**: HIGH/MEDIUM/LOW
-- **Type**: [bugs/security/performance/architecture]
+- **Type**: bugs/security/performance/architecture/code-quality
 
-Only include issues you can actually identify from the code provided. If a file has no issues, do not create fake issues.`;
+IMPORTANT:
+- Only report issues you can actually see in the code
+- Be specific - reference actual code patterns, functions, or lines
+- Do NOT include generic templates or placeholder text
+- Do NOT say "I don't have access" - you have the code
+- If a file has no issues, you can skip it (but still analyze it thoroughly)
+
+Format each issue clearly. Focus on actionable, specific problems.`;
 
       console.log("Executing Cline analysis...");
       const { stdout, stderr } = await executeCline(prompt, 600000);
@@ -2003,26 +2047,84 @@ CRITICAL: The score in "Merge Readiness Score: **XX/100**" MUST match the actual
         throw new Error(`Failed to parse Open AI PR analysis: ${parseError instanceof Error ? parseError.message : "Unknown error"}. Raw output: ${analysisOutput.substring(0, 500)}`);
       }
 
-      // Extract score from analysis field if it exists and is different
-      let finalScore = scoreResult.score;
-      if (scoreResult.analysis) {
-        const analysisScoreMatch = scoreResult.analysis.match(/##\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/i) ||
-                                   scoreResult.analysis.match(/merge\s+readiness\s+score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/i);
-        if (analysisScoreMatch) {
-          const analysisScore = parseInt(analysisScoreMatch[1], 10);
-          if (!isNaN(analysisScore) && analysisScore >= 0 && analysisScore <= 100) {
-            finalScore = analysisScore;
-            console.log(`Extracted score ${finalScore} from analysis field (was ${scoreResult.score})`);
+      // Calculate score from sub-scores in analysis (e.g., (15/20), (10/10))
+      function calculateScoreFromAnalysis(analysisText: string): number | null {
+        if (!analysisText) return null;
+        
+        // Find all (X/Y) patterns like (15/20), (10/10), etc.
+        const scorePattern = /\((\d+)\s*\/\s*(\d+)\)/g;
+        const matches = [...analysisText.matchAll(scorePattern)];
+        
+        if (matches.length === 0) return null;
+        
+        let totalPercentage = 0;
+        let count = 0;
+        
+        for (const match of matches) {
+          const score = parseInt(match[1], 10);
+          const max = parseInt(match[2], 10);
+          if (!isNaN(score) && !isNaN(max) && max > 0) {
+            const percentage = (score / max) * 100;
+            totalPercentage += percentage;
+            count++;
           }
         }
+        
+        if (count === 0) return null;
+        
+        const averageScore = Math.round(totalPercentage / count);
+        return Math.max(0, Math.min(100, averageScore));
       }
+      
+      // ALWAYS calculate score from analysis sub-scores if available (most accurate)
+      let finalScore = scoreResult.score;
+      if (scoreResult.analysis) {
+        const calculatedScore = calculateScoreFromAnalysis(scoreResult.analysis);
+        if (calculatedScore !== null) {
+          finalScore = calculatedScore;
+          console.log(`✅ Calculated score ${finalScore} from analysis sub-scores (was ${scoreResult.score})`);
+        } else {
+          // Fallback: extract from "Merge Readiness Score: **85**" format in full output
+          const fullOutputScore = calculateScoreFromAnalysis(analysisOutput);
+          if (fullOutputScore !== null) {
+            finalScore = fullOutputScore;
+            console.log(`✅ Calculated score ${finalScore} from full output sub-scores`);
+          } else {
+            // Last fallback: extract from score header
+            const analysisScoreMatch = analysisOutput.match(/##\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/i) ||
+                                       analysisOutput.match(/merge\s+readiness\s+score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/i);
+            if (analysisScoreMatch) {
+              const analysisScore = parseInt(analysisScoreMatch[1], 10);
+              if (!isNaN(analysisScore) && analysisScore >= 0 && analysisScore <= 100) {
+                finalScore = analysisScore;
+                console.log(`✅ Extracted score ${finalScore} from score header (was ${scoreResult.score})`);
+              }
+            }
+          }
+        }
+      } else {
+        // If no analysis, try to calculate from full output
+        const calculatedScore = calculateScoreFromAnalysis(analysisOutput);
+        if (calculatedScore !== null) {
+          finalScore = calculatedScore;
+          console.log(`✅ Calculated score ${finalScore} from full output (no analysis field)`);
+        }
+      }
+
+      // Ensure analysis is populated - use extracted analysis or fallback to full output
+      const finalAnalysis = scoreResult.analysis && scoreResult.analysis.length > 20 
+        ? scoreResult.analysis 
+        : analysisOutput
+            .replace(/##\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/gi, "")
+            .replace(/###\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/gi, "")
+            .substring(0, 3000);
 
       res.json({
         prNumber: parseInt(prNumber),
         score: finalScore,
         reasoning: scoreResult.reasoning,
         recommendations: scoreResult.recommendations,
-        analysis: scoreResult.analysis || analysisOutput.substring(0, 1000),
+        analysis: finalAnalysis,
         metadata: {
           isDraft: isDraft,
           mergeable: pr.mergeable,

@@ -166,6 +166,7 @@ function PRsList() {
         score: data.score,
         reasoning: data.reasoning,
         recommendations: data.recommendations || [],
+        analysis: data.analysis || "",
       });
       setPrScores(newScores);
       
@@ -448,31 +449,34 @@ function PRsList() {
                                       <span className="text-2xl font-semibold text-muted-foreground">/100</span>
                                     </div>
                                   </div>
-                                  <div className="mt-4 p-3 rounded-lg bg-background/50 backdrop-blur-sm">
-                                    <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-wide">Detailed Analysis</p>
-                                    <div 
-                                      className="text-sm text-foreground leading-relaxed prose prose-invert max-w-none"
-                                      dangerouslySetInnerHTML={{
-                                        __html: (prScores.get(pr.number)!.analysis || "")
-                                          .replace(/##\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/gi, "")
-                                          .replace(/###\s+(.*?)(?=\n|$)/g, "<h3 class='text-base font-bold mt-3 mb-2'>$1</h3>")
-                                          .replace(/##\s+(.*?)(?=\n|$)/g, "<h2 class='text-lg font-bold mt-4 mb-2'>$1</h2>")
-                                          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                                          .replace(/\*(.*?)\*/g, "<em>$1</em>")
-                                          .replace(/`([^`]+)`/g, "<code class='bg-secondary px-1 rounded text-xs'>$1</code>")
-                                          .replace(/```[\s\S]*?```/g, (match) => {
-                                            const code = match.replace(/```[\w]*\n?/g, "").trim();
-                                            return `<pre class='bg-secondary p-2 rounded overflow-x-auto my-2'><code class='text-xs'>${code}</code></pre>`;
-                                          })
-                                          .replace(/^\d+\.\s+(.*?)$/gm, "<li class='ml-4 mb-1 list-disc'>$1</li>")
-                                          .replace(/^-\s+(.*?)$/gm, "<li class='ml-4 mb-1 list-disc'>$1</li>")
-                                          .replace(/\n\n/g, "</p><p class='mb-2'>")
-                                          .replace(/\n/g, "<br />")
-                                          .replace(/^/, "<p class='mb-2'>")
-                                          .replace(/$/, "</p>")
-                                      }}
-                                    />
-                                  </div>
+                                  {prScores.get(pr.number)!.analysis && (
+                                    <div className="mt-4 p-3 rounded-lg bg-background/50 backdrop-blur-sm">
+                                      <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-wide">Detailed Analysis</p>
+                                      <div 
+                                        className="text-sm text-foreground leading-relaxed prose prose-invert max-w-none"
+                                        dangerouslySetInnerHTML={{
+                                          __html: (prScores.get(pr.number)!.analysis || "")
+                                            .replace(/##\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/gi, "")
+                                            .replace(/###\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/gi, "")
+                                            .replace(/###\s+(.*?)(?=\n|$)/g, "<h3 class='text-base font-bold mt-3 mb-2'>$1</h3>")
+                                            .replace(/##\s+(.*?)(?=\n|$)/g, "<h2 class='text-lg font-bold mt-4 mb-2'>$1</h2>")
+                                            .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                                            .replace(/\*(.*?)\*/g, "<em>$1</em>")
+                                            .replace(/`([^`]+)`/g, "<code class='bg-secondary px-1 rounded text-xs'>$1</code>")
+                                            .replace(/```[\s\S]*?```/g, (match) => {
+                                              const code = match.replace(/```[\w]*\n?/g, "").trim();
+                                              return `<pre class='bg-secondary p-2 rounded overflow-x-auto my-2'><code class='text-xs'>${code}</code></pre>`;
+                                            })
+                                            .replace(/^\d+\.\s+(.*?)$/gm, "<li class='ml-4 mb-1 list-disc'>$1</li>")
+                                            .replace(/^-\s+(.*?)$/gm, "<li class='ml-4 mb-1 list-disc'>$1</li>")
+                                            .replace(/\n\n/g, "</p><p class='mb-2'>")
+                                            .replace(/\n/g, "<br />")
+                                            .replace(/^/, "<p class='mb-2'>")
+                                            .replace(/$/, "</p>")
+                                        }}
+                                      />
+                                    </div>
+                                  )}
                                   {/* {prScores.get(pr.number)!.recommendations.length > 0 && (
                                     <div className="mt-4 p-3 rounded-lg bg-background/50 backdrop-blur-sm">
                                       <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-wide">Recommendations</p>
