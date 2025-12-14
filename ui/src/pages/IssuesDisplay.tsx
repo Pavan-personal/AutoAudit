@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ArrowLeft, AlertTriangle, CheckCircle, Loader2, Github } from "lucide-react";
+import { ArrowLeft, AlertTriangle, CheckCircle, Loader2, Github, Filter } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface Issue {
   title: string;
@@ -32,6 +33,8 @@ function IssuesDisplay() {
   const navigate = useNavigate();
   const [creatingIssues, setCreatingIssues] = useState<Set<number>>(new Set());
   const [createdIssues, setCreatedIssues] = useState<Set<number>>(new Set());
+  const [priorityFilter, setPriorityFilter] = useState<string>("all");
+  const [fileFilter, setFileFilter] = useState<string>("all");
   const API_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
   const GITHUB_CLIENT_ID = import.meta.env.VITE_GITHUB_CLIENT_ID || "";
 
@@ -126,14 +129,114 @@ function IssuesDisplay() {
   }
 
   function extractPriority(body: string): string {
-    const priorityMatch = body.match(/\*\*Priority\*\*\s*\*\*(.*?)\*\*/);
-    return priorityMatch ? priorityMatch[1].trim() : "MEDIUM";
+    // Try multiple patterns: "- Priority Level: HIGH", "Priority Level: HIGH", "**Priority Level**: HIGH"
+    const patterns = [
+      /-?\s*Priority\s+Level[:\s]+(HIGH|MEDIUM|LOW)/i,
+      /\*\*Priority\s+Level\*\*[:\s]+(HIGH|MEDIUM|LOW)/i,
+      /Priority[:\s]+(HIGH|MEDIUM|LOW)/i,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = body.match(pattern);
+      if (match && match[1]) {
+        return match[1].toUpperCase();
+      }
+    }
+    
+    return "MEDIUM";
   }
 
   function extractType(body: string): string {
-    const typeMatch = body.match(/## Type\s*\n(.*?)\n/);
-    return typeMatch ? typeMatch[1].trim() : "unknown";
+    // Try multiple patterns: "- Type: security", "Type: security", "**Type**: security"
+    const patterns = [
+      /-?\s*Type[:\s]+(\w+)/i,
+      /\*\*Type\*\*[:\s]+(\w+)/i,
+      /##\s+Type\s*\n(.*?)\n/i,
+    ];
+    
+    for (const pattern of patterns) {
+      const match = body.match(pattern);
+      if (match && match[1]) {
+        return match[1].trim().toLowerCase();
+      }
+    }
+    
+    return "unknown";
   }
+
+  function parseMarkdown(text: string): string {
+    return text
+      // Headers
+      .replace(/###\s+(.*?)(?=\n|$)/g, "<h3 class='text-base font-bold mt-3 mb-2'>$1</h3>")
+      .replace(/##\s+(.*?)(?=\n|$)/g, "<h2 class='text-lg font-bold mt-4 mb-2'>$1</h2>")
+      // Bold
+      .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+      // Italic
+      .replace(/\*(.*?)\*/g, "<em>$1</em>")
+      // Inline code
+      .replace(/`([^`]+)`/g, "<code class='bg-secondary px-1 rounded text-xs'>$1</code>")
+      // Code blocks
+      .replace(/```[\s\S]*?```/g, (match) => {
+        const code = match.replace(/```[\w]*\n?/g, "").trim();
+        return `<pre class='bg-secondary p-2 rounded overflow-x-auto my-2'><code class='text-xs'>${code}</code></pre>`;
+      })
+      // Ordered lists
+      .replace(/^\d+\.\s+(.*?)$/gm, "<li class='ml-4 mb-1 list-decimal'>$1</li>")
+      // Unordered lists (lines starting with -)
+      .replace(/^-\s+(.*?)$/gm, "<li class='ml-4 mb-1 list-disc'>$1</li>")
+      // Paragraphs (double newlines)
+      .replace(/\n\n/g, "</p><p class='mb-2'>")
+      // Single newlines
+      .replace(/\n/g, "<br />")
+      // Wrap in paragraph
+      .replace(/^/, "<p class='mb-2'>")
+      .replace(/$/, "</p>");
+  }
+
+  // Get all unique files and priorities for filters
+  const allFiles = useMemo(() => {
+    const files = new Set<string>();
+    analysis?.results.forEach((result) => {
+      if (result.issues.length > 0) {
+        files.add(result.file);
+      }
+    });
+    return Array.from(files).sort();
+  }, [analysis]);
+
+  // Filter results based on selected filters
+  const filteredResults = useMemo(() => {
+    if (!analysis) return [];
+    
+    return analysis.results
+      .map((result) => {
+        if (result.status !== "success" || result.issues.length === 0) {
+          return null;
+        }
+
+        // Filter by file
+        if (fileFilter !== "all" && result.file !== fileFilter) {
+          return null;
+        }
+
+        // Filter issues by priority
+        const filteredIssues = result.issues.filter((issue) => {
+          if (priorityFilter === "all") return true;
+          const priority = extractPriority(issue.body);
+          return priority === priorityFilter.toUpperCase();
+        });
+
+        if (filteredIssues.length === 0) {
+          return null;
+        }
+
+        return {
+          ...result,
+          issues: filteredIssues,
+        };
+      })
+      .filter((result): result is FileResult => result !== null);
+  }, [analysis, priorityFilter, fileFilter]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -163,7 +266,7 @@ function IssuesDisplay() {
               <CardTitle>Summary</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-4 mb-6">
                 <div className="text-center p-4 rounded-lg bg-secondary/50">
                   <p className="text-2xl font-bold">{analysis.summary.total_files}</p>
                   <p className="text-sm text-muted-foreground">Files Analyzed</p>
@@ -175,6 +278,45 @@ function IssuesDisplay() {
                 <div className="text-center p-4 rounded-lg bg-secondary/50">
                   <p className="text-2xl font-bold">{analysis.summary.files_with_issues}</p>
                   <p className="text-sm text-muted-foreground">Files with Issues</p>
+                </div>
+              </div>
+              
+              <div className="flex flex-wrap gap-4 items-center">
+                <div className="flex items-center gap-2">
+                  <Filter className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm font-medium">Filters:</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-muted-foreground">Priority:</label>
+                  <Select value={priorityFilter} onValueChange={setPriorityFilter}>
+                    <SelectTrigger className="w-[140px]">
+                      <SelectValue placeholder="All Priorities" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Priorities</SelectItem>
+                      <SelectItem value="HIGH">High</SelectItem>
+                      <SelectItem value="MEDIUM">Medium</SelectItem>
+                      <SelectItem value="LOW">Low</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-muted-foreground">File:</label>
+                  <Select value={fileFilter} onValueChange={setFileFilter}>
+                    <SelectTrigger className="w-[200px]">
+                      <SelectValue placeholder="All Files" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Files</SelectItem>
+                      {allFiles.map((file) => (
+                        <SelectItem key={file} value={file}>
+                          {file.length > 30 ? `${file.substring(0, 30)}...` : file}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardContent>
@@ -215,8 +357,13 @@ function IssuesDisplay() {
                             <CardHeader>
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <CardTitle className="text-lg mb-2">{issue.title}</CardTitle>
-                                  <div className="flex items-center gap-2 flex-wrap">
+                                  <div 
+                                    className="text-lg font-semibold mb-2"
+                                    dangerouslySetInnerHTML={{
+                                      __html: parseMarkdown(issue.title)
+                                    }}
+                                  />
+                                  <div className="flex items-center gap-2 flex-wrap mt-2">
                                     <Badge
                                       variant={
                                         priority === "HIGH"
@@ -244,15 +391,7 @@ function IssuesDisplay() {
                               <div
                                 className="prose prose-invert max-w-none text-sm text-muted-foreground mb-4"
                                 dangerouslySetInnerHTML={{
-                                  __html: issue.body
-                                    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                                    .replace(/\*(.*?)\*/g, "<em>$1</em>")
-                                    .replace(/`([^`]+)`/g, "<code class='bg-secondary px-1 rounded'>$1</code>")
-                                    .replace(/```[\s\S]*?```/g, (match) => {
-                                      const code = match.replace(/```[\w]*\n?/g, "").trim();
-                                      return `<pre class='bg-secondary p-2 rounded overflow-x-auto'><code>${code}</code></pre>`;
-                                    })
-                                    .replace(/\n/g, "<br />"),
+                                  __html: parseMarkdown(issue.body)
                                 }}
                               />
                               <Button
@@ -289,11 +428,15 @@ function IssuesDisplay() {
             })}
           </div>
 
-          {analysis.results.every((r) => r.issues.length === 0) && (
+          {filteredResults.length === 0 && (
             <Card>
               <CardContent className="py-12 text-center">
                 <CheckCircle className="w-12 h-12 text-primary mx-auto mb-4" />
-                <p className="text-muted-foreground">No issues found! Your code looks good.</p>
+                <p className="text-muted-foreground">
+                  {priorityFilter !== "all" || fileFilter !== "all"
+                    ? "No issues match the selected filters."
+                    : "No issues found! Your code looks good."}
+                </p>
               </CardContent>
             </Card>
           )}
