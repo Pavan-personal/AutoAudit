@@ -1099,7 +1099,7 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
           const decoded = jwt.verify(authToken, JWT_SECRET) as { userId: string };
           const user = await prisma.user.findUnique({
             where: { id: decoded.userId },
-            select: { id: true },
+            select: { id: true, githubToken: true },
           });
           if (user) {
             const {
@@ -1136,6 +1136,7 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
                 comments,
                 updatedAt,
                 autoAssign: true,
+                githubToken: user.githubToken,
               },
               create: {
                 repositoryOwner: owner,
@@ -1154,6 +1155,7 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
                 updatedAt,
                 autoAssign: true,
                 userId: user.id,
+                githubToken: user.githubToken,
               },
             });
 
@@ -1237,6 +1239,118 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
   } catch (error: unknown) {
     console.error("Error saving automated issue:", error);
     res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ====== KESTRA AUTOMATION ENDPOINTS ======
+
+// Assign user to an issue (called by Kestra)
+router.post("/:owner/:repo/issues/:number/assign", async (req: Request, res: Response) => {
+  try {
+    const { owner, repo, number } = req.params;
+    const { assignee, githubToken } = req.body;
+
+    if (!assignee) {
+      res.status(400).json({ error: "Assignee username is required" });
+      return;
+    }
+
+    if (!githubToken) {
+      res.status(400).json({ error: "GitHub token is required" });
+      return;
+    }
+
+    console.log(`[ASSIGN] Assigning issue #${number} to ${assignee} in ${owner}/${repo}`);
+
+    // Call GitHub API to assign the issue
+    const response = await axios.post(
+      `https://api.github.com/repos/${owner}/${repo}/issues/${number}/assignees`,
+      { assignees: [assignee] },
+      {
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      }
+    );
+
+    // Update automated issue record
+    await prisma.automatedIssue.updateMany({
+      where: {
+        repositoryOwner: owner,
+        repositoryName: repo,
+        issueNumber: parseInt(number),
+      },
+      data: {
+        assignedTo: assignee,
+      },
+    });
+
+    console.log(`[ASSIGN] Successfully assigned issue #${number} to ${assignee}`);
+    res.json({ 
+      success: true, 
+      message: `Issue assigned to ${assignee}`,
+      assignees: response.data.assignees 
+    });
+  } catch (error: unknown) {
+    console.error("[ASSIGN] Error assigning issue:", error);
+    if (axios.isAxiosError(error)) {
+      res.status(error.response?.status || 500).json({
+        error: error.response?.data?.message || "Failed to assign issue",
+      });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
+  }
+});
+
+// Post a comment on an issue (called by Kestra)
+router.post("/:owner/:repo/issues/:number/comment", async (req: Request, res: Response) => {
+  try {
+    const { owner, repo, number } = req.params;
+    const { comment, githubToken } = req.body;
+
+    if (!comment) {
+      res.status(400).json({ error: "Comment text is required" });
+      return;
+    }
+
+    if (!githubToken) {
+      res.status(400).json({ error: "GitHub token is required" });
+      return;
+    }
+
+    console.log(`[COMMENT] Posting comment on issue #${number} in ${owner}/${repo}`);
+
+    // Call GitHub API to post comment
+    const response = await axios.post(
+      `https://api.github.com/repos/${owner}/${repo}/issues/${number}/comments`,
+      { body: comment },
+      {
+        headers: {
+          Authorization: `Bearer ${githubToken}`,
+          Accept: "application/vnd.github+json",
+          "X-GitHub-Api-Version": "2022-11-28",
+        },
+      }
+    );
+
+    console.log(`[COMMENT] Successfully posted comment on issue #${number}`);
+    res.json({ 
+      success: true, 
+      message: "Comment posted successfully",
+      comment: response.data 
+    });
+  } catch (error: unknown) {
+    console.error("[COMMENT] Error posting comment:", error);
+    if (axios.isAxiosError(error)) {
+      res.status(error.response?.status || 500).json({
+        error: error.response?.data?.message || "Failed to post comment",
+      });
+    } else {
+      res.status(500).json({ error: "Internal server error" });
+    }
   }
 });
 

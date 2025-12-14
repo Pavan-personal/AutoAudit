@@ -8,6 +8,10 @@ dist-ssr/
 
 /.venv
 
+/.env
+
+/kestra-setup
+
 # Coverage
 coverage/
 .nyc_output/

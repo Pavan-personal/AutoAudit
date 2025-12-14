@@ -48,6 +48,7 @@ model AutomatedIssue {
   autoAssign      Boolean  @default(true)
   assignedTo      String?
   userId          String
+  githubToken     String?  // Token for Kestra to call GitHub API
   createdAtDb     DateTime @default(now())
   
   @@unique([repositoryOwner, repositoryName, issueNumber])

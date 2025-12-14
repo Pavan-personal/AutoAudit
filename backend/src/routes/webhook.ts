@@ -1,9 +1,13 @@
 import express, { Request, Response } from "express";
 import crypto from "crypto";
+import { PrismaClient } from "@prisma/client";
+import axios from "axios";
 
 const router = express.Router();
+const prisma = new PrismaClient();
 
 const GITHUB_WEBHOOK_SECRET = process.env.GITHUB_WEBHOOK_SECRET;
+const KESTRA_WEBHOOK_URL = process.env.KESTRA_WEBHOOK_URL;
 
 function verifyGitHubSignature(req: Request): boolean {
   if (!GITHUB_WEBHOOK_SECRET) {
@@ -33,7 +37,82 @@ function verifyGitHubSignature(req: Request): boolean {
   return isValid;
 }
 
-router.post("/github", express.raw({ type: "application/json" }), (req: Request, res: Response) => {
+// Handle issue comment and forward to Kestra if issue is automated
+async function handleIssueComment(payload: any) {
+  try {
+    const issue = payload.issue;
+    const comment = payload.comment;
+    const repository = payload.repository;
+    
+    const owner = repository.owner.login;
+    const repo = repository.name;
+    const issueNumber = issue.number;
+    
+    console.log(`[WEBHOOK] Checking if issue #${issueNumber} is automated...`);
+    
+    // Check if this issue is in our automated issues table
+    const automatedIssue = await prisma.automatedIssue.findFirst({
+      where: {
+        repositoryOwner: owner,
+        repositoryName: repo,
+        issueNumber: issueNumber,
+      },
+      select: {
+        id: true,
+        issueNumber: true,
+        title: true,
+        body: true,
+        githubToken: true,
+      },
+    });
+    
+    if (!automatedIssue) {
+      console.log(`[WEBHOOK] Issue #${issueNumber} is not automated, skipping.`);
+      return;
+    }
+    
+    console.log(`[WEBHOOK] Issue #${issueNumber} is automated! Forwarding to Kestra...`);
+    
+    if (!KESTRA_WEBHOOK_URL) {
+      console.error("[WEBHOOK] KESTRA_WEBHOOK_URL not configured!");
+      return;
+    }
+    
+    // Prepare payload for Kestra
+    const kestraPayload = {
+      issue_number: issueNumber,
+      owner: owner,
+      repo: repo,
+      comment_body: comment.body,
+      commenter_username: comment.user.login,
+      commenter_id: comment.user.id,
+      issue_title: issue.title,
+      issue_body: issue.body || "",
+      github_token: automatedIssue.githubToken,
+      backend_api_url: process.env.BACKEND_URL || "https://autoauditserver.vercel.app",
+      comment_created_at: comment.created_at,
+    };
+    
+    console.log(`[WEBHOOK] Sending to Kestra:`, JSON.stringify(kestraPayload, null, 2));
+    
+    // Forward to Kestra webhook
+    const kestraResponse = await axios.post(KESTRA_WEBHOOK_URL, kestraPayload, {
+      headers: {
+        "Content-Type": "application/json",
+      },
+      timeout: 10000,
+    });
+    
+    console.log(`[WEBHOOK] Kestra response:`, kestraResponse.status, kestraResponse.data);
+  } catch (error) {
+    console.error("[WEBHOOK] Error forwarding to Kestra:", error);
+    if (axios.isAxiosError(error)) {
+      console.error("[WEBHOOK] Kestra error response:", error.response?.data);
+    }
+  }
+}
+
+router.post("/github", express.raw({ type: "application/json" }), async (req: Request, res: Response) => {
   const rawBody = req.body;
   
   if (!rawBody) {
@@ -99,6 +178,18 @@ router.post("/github", express.raw({ type: "application/json" }), (req: Request,
         console.log("[WEBHOOK /github] Issue event received");
         console.log("[WEBHOOK /github] Action:", webhookPayload.action);
         console.log("[WEBHOOK /github] Issue #:", webhookPayload.issue?.number);
+        break;
+
+      case "issue_comment":
+        console.log("[WEBHOOK /github] Issue comment event received");
+        console.log("[WEBHOOK /github] Action:", webhookPayload.action);
+        console.log("[WEBHOOK /github] Issue #:", webhookPayload.issue?.number);
+        console.log("[WEBHOOK /github] Comment by:", webhookPayload.comment?.user?.login);
+        
+        // Handle issue comment for automated issues
+        if (webhookPayload.action === "created" && webhookPayload.issue && webhookPayload.comment) {
+          await handleIssueComment(webhookPayload);
+        }
         break;
 
       case "repository":
