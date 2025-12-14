@@ -53,7 +53,7 @@ router.get("/github/callback", async (req: Request, res: Response) => {
         <html>
           <head><title>Error</title></head>
           <body>
-            <script>window.location.href = ${JSON.stringify(`${FRONTEND_URL}?error=missing_params`)};</script>
+            <script>window.location.href = ${JSON.stringify(`${FRONTEND_URL}/dashboard`)};</script>
             <p>Redirecting...</p>
           </body>
         </html>
@@ -70,7 +70,7 @@ router.get("/github/callback", async (req: Request, res: Response) => {
         <html>
           <head><title>Error</title></head>
           <body>
-            <script>window.location.href = ${JSON.stringify(`${FRONTEND_URL}?error=missing_state`)};</script>
+            <script>window.location.href = ${JSON.stringify(`${FRONTEND_URL}/dashboard`)};</script>
             <p>Redirecting...</p>
           </body>
         </html>

@@ -228,7 +228,9 @@ function IssuesDisplay() {
                                     >
                                       {priority}
                                     </Badge>
-                                    <Badge variant="outline">{type}</Badge>
+                                    {type && type !== "unknown" && (
+                                      <Badge variant="outline">{type}</Badge>
+                                    )}
                                     {issue.tags.map((tag, tagIndex) => (
                                       <Badge key={tagIndex} variant="outline">
                                         {tag}
@@ -243,9 +245,14 @@ function IssuesDisplay() {
                                 className="prose prose-invert max-w-none text-sm text-muted-foreground mb-4"
                                 dangerouslySetInnerHTML={{
                                   __html: issue.body
-                                    .replace(/\n/g, "<br />")
                                     .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
-                                    .replace(/`(.*?)`/g, "<code class='bg-secondary px-1 rounded'>$1</code>"),
+                                    .replace(/\*(.*?)\*/g, "<em>$1</em>")
+                                    .replace(/`([^`]+)`/g, "<code class='bg-secondary px-1 rounded'>$1</code>")
+                                    .replace(/```[\s\S]*?```/g, (match) => {
+                                      const code = match.replace(/```[\w]*\n?/g, "").trim();
+                                      return `<pre class='bg-secondary p-2 rounded overflow-x-auto'><code>${code}</code></pre>`;
+                                    })
+                                    .replace(/\n/g, "<br />"),
                                 }}
                               />
                               <Button

@@ -104,7 +104,7 @@ function ClineFileSelection() {
               <div>
                 <h1 className="text-4xl font-bold mb-2 flex items-center gap-2">
                   <Sparkles className="w-8 h-8 text-primary" />
-                  Cline AI Repository Scan
+                  Full Codebase Scan
                 </h1>
                 <p className="text-muted-foreground">
                   Comprehensive AI-powered analysis of your entire codebase
@@ -128,7 +128,7 @@ function ClineFileSelection() {
                 <CardTitle>Scan Entire Repository</CardTitle>
               </div>
               <CardDescription>
-                Cline AI tool will analyze your entire codebase, including all files and directories (excluding common build artifacts and dependencies).
+                Complete codebase scanning using advanced AI models and research. Analyzes your entire repository, including all files and directories (excluding common build artifacts and dependencies).
               </CardDescription>
             </CardHeader>
             <CardContent>

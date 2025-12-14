@@ -80,8 +80,8 @@ function Repositories() {
     setFilteredRepos(filtered);
   }, [searchQuery, repositories]);
 
-  function handleAudit(repo: Repository, useCline: boolean = false) {
-    if (useCline) {
+  function handleAudit(repo: Repository, useFullScan: boolean = false) {
+    if (useFullScan) {
       navigate(`/repositories/${repo.full_name}/files-cline`);
     } else {
       navigate(`/repositories/${repo.full_name}/files`);
@@ -155,9 +155,9 @@ function Repositories() {
               </CardContent>
             </Card>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
               {filteredRepos.map((repo) => (
-                <Card key={repo.id} className="glass-card-hover h-fit">
+                <Card key={repo.id} className="glass-card-hover break-inside-avoid mb-6 w-full">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -203,15 +203,15 @@ function Repositories() {
                           size="sm"
                         >
                           <Sparkles className="w-4 h-4 mr-2 group-hover:text-primary" />
-                          Cline
+                          Full Scan
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground">
-                        AI-powered code analysis to detect issues and create GitHub issues automatically
+                        Oumi: Limited files, best response. Full Scan: Complete codebase scanning using advanced AI models and research.
                       </p>
                     </div>
                     
-                    <div className="pt-2 border-t border-border space-y-2">
+                    <div className="pt-4 border-t border-border space-y-2">
                       <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Management</p>
                       <div className="flex gap-2">
                         <Button
@@ -231,6 +231,9 @@ function Repositories() {
                           Review PRs
                         </Button>
                       </div>
+                      <p className="text-xs text-muted-foreground">
+                        Set up automated issue tracking and management, or analyze and review pull requests with AI-powered insights.
+                      </p>
                     </div>
                   </CardContent>
                 </Card>

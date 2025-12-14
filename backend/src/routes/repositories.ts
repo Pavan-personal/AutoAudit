@@ -183,7 +183,7 @@ async function executeCline(prompt: string, timeout: number = 300000): Promise<{
           messages: [
             {
               role: "system",
-              content: "You are Cline, an expert AI coding assistant. Analyze code thoroughly and provide detailed, actionable feedback. Format your responses clearly and professionally.",
+              content: "You are OPEN AI, an expert AI coding assistant. Analyze code thoroughly and provide detailed, actionable feedback. Format your responses clearly and professionally.",
             },
             {
               role: "user",
@@ -219,7 +219,7 @@ async function executeCline(prompt: string, timeout: number = 300000): Promise<{
                 messages: [
                   {
                     role: "system",
-                    content: "You are Cline, an expert AI coding assistant. Analyze code thoroughly and provide detailed, actionable feedback. Format your responses clearly and professionally.",
+                    content: "You are OpenAI, an expert AI coding assistant. Analyze code thoroughly and provide detailed, actionable feedback. Format your responses clearly and professionally.",
                   },
                   {
                     role: "user",
@@ -466,7 +466,7 @@ function extractTags(text: string): string[] {
   return tags.length > 0 ? tags : ["review"];
 }
 
-function parseClinePRScore(output: string): { score: number; reasoning: string; recommendations: string[] } {
+function parseClinePRScore(output: string): { score: number; reasoning: string; recommendations: string[]; analysis: string } {
   const lowerOutput = output.toLowerCase();
   
   if (!output || output.trim().length === 0) {
@@ -492,12 +492,26 @@ function parseClinePRScore(output: string): { score: number; reasoning: string; 
   let score = 50;
   const reasoning: string[] = [];
   const recommendations: string[] = [];
+  let analysis = "";
 
-  const scoreMatch = output.match(/(?:score|rating|readiness)[:\s]*(\d{1,3})(?:\s*\/\s*100)?/i);
-  if (scoreMatch) {
-    const parsedScore = parseInt(scoreMatch[1], 10);
-    if (!isNaN(parsedScore) && parsedScore >= 0 && parsedScore <= 100) {
-      score = parsedScore;
+  // Extract score from "## Merge Readiness Score: **85**" or "Merge Readiness Score: **85/100**" format
+  // Try multiple patterns to find the score
+  const scorePatterns = [
+    /##\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/i,
+    /merge\s+readiness\s+score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/i,
+    /merge\s+readiness\s+score[:\s]*(\d{1,3})(?:\s*\/\s*100)?/i,
+    /(?:score|rating|readiness)[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/i,
+    /(?:score|rating|readiness)[:\s]*(\d{1,3})(?:\s*\/\s*100)?/i,
+  ];
+  
+  for (const pattern of scorePatterns) {
+    const scoreMatch = output.match(pattern);
+    if (scoreMatch && scoreMatch[1]) {
+      const parsedScore = parseInt(scoreMatch[1], 10);
+      if (!isNaN(parsedScore) && parsedScore >= 0 && parsedScore <= 100) {
+        score = parsedScore;
+        break; // Use first valid match
+      }
     }
   }
 
@@ -537,9 +551,22 @@ function parseClinePRScore(output: string): { score: number; reasoning: string; 
     recommendations.push("Resolve merge conflicts before merging");
   }
 
-  const reasoningMatch = output.match(/(?:reasoning|analysis|assessment)[:\s]*([^\n]+(?:\n[^\n]+){0,5})/i);
-  if (reasoningMatch && reasoningMatch[1].length > 20) {
+  // Extract Analysis section
+  const analysisMatch = output.match(/####?\s*Detailed\s+Analysis[:\s]*\n([\s\S]*?)(?=\n####?\s*|$)/i);
+  if (analysisMatch && analysisMatch[1].trim().length > 20) {
+    analysis = analysisMatch[1].trim();
+  }
+
+  // Extract Reasoning section
+  const reasoningMatch = output.match(/####?\s*Detailed\s+Reasoning[:\s]*\n([\s\S]*?)(?=\n####?\s*|$)/i);
+  if (reasoningMatch && reasoningMatch[1].trim().length > 20) {
     reasoning.push(reasoningMatch[1].trim());
+  } else {
+    // Fallback: look for reasoning in other formats
+    const fallbackReasoning = output.match(/(?:reasoning|analysis|assessment)[:\s]*([^\n]+(?:\n[^\n]+){0,5})/i);
+    if (fallbackReasoning && fallbackReasoning[1].length > 20) {
+      reasoning.push(fallbackReasoning[1].trim());
+    }
   }
 
   if (reasoning.length === 0) {
@@ -551,16 +578,40 @@ function parseClinePRScore(output: string): { score: number; reasoning: string; 
     }
   }
 
-  const recommendationsMatch = output.match(/(?:recommendations?|suggestions?|improvements?)[:\s]*([^\n]+(?:\n[^\n-]+){0,10})/i);
+  // Extract Recommendations section
+  const recommendationsMatch = output.match(/####?\s*Recommendations[:\s]*\n([\s\S]*?)(?=\n####?\s*|$)/i);
   if (recommendationsMatch) {
-    const recs = recommendationsMatch[1].split(/\n|•|-/).filter(r => r.trim().length > 10);
-    recommendations.push(...recs.slice(0, 5).map(r => r.trim()));
+    const recsText = recommendationsMatch[1];
+    const recs = recsText.split(/\n[-*•]\s*/).filter(r => r.trim().length > 5 && !r.trim().toLowerCase().includes("for improvement:"));
+    recommendations.push(...recs.map(r => r.trim().replace(/^[-*•]\s*/, "")).slice(0, 5));
+  } else {
+    // Fallback pattern
+    const fallbackRecs = output.match(/(?:recommendations?|suggestions?|improvements?)[:\s]*([^\n]+(?:\n[^\n-]+){0,10})/i);
+    if (fallbackRecs) {
+      const recsText = fallbackRecs[1];
+      const recs = recsText.split(/\n[-*•]\s*/).filter(r => r.trim().length > 5 && !r.trim().toLowerCase().includes("for improvement:"));
+      recommendations.push(...recs.map(r => r.trim().replace(/^[-*•]\s*/, "")).slice(0, 5));
+    }
+  }
+
+  if (recommendations.length === 0) {
+    if (score < 50) {
+      recommendations.push("Review code quality and fix critical issues before merging");
+    } else if (score < 70) {
+      recommendations.push("Address identified issues to improve merge readiness");
+    }
+  }
+
+  // If no analysis extracted, use reasoning as fallback
+  if (!analysis || analysis.length < 20) {
+    analysis = reasoning.join(". ") || output.substring(0, 500);
   }
 
   return {
     score: Math.max(0, Math.min(100, score)),
     reasoning: reasoning.join(". "),
     recommendations: recommendations.length > 0 ? recommendations : [],
+    analysis,
   };
 }
 
@@ -1650,8 +1701,40 @@ router.post("/:owner/:repo/analyze-cline", async (req: Request, res: Response) =
       const moreFiles = fileCount > 10 ? ` and ${fileCount - 10} more files` : "";
       
       const prompt = userPrompt
-        ? `Analyze this entire codebase (${fileCount} files: ${filePaths}${moreFiles}). ${userPrompt}. Perform a comprehensive code review and identify bugs, security vulnerabilities, code quality issues, performance problems, and architectural concerns. For each issue found, provide: 1) A clear title, 2) File path and line numbers if possible, 3) Detailed description, 4) Priority level (HIGH/MEDIUM/LOW), 5) Type (bugs, security, performance, architecture, etc.). Format the output clearly with file paths.`
-        : `Analyze this entire codebase (${fileCount} files: ${filePaths}${moreFiles}). Perform a comprehensive code review and identify bugs, security vulnerabilities, code quality issues, performance problems, and architectural concerns. For each issue found, provide: 1) A clear title, 2) File path and line numbers if possible, 3) Detailed description, 4) Priority level (HIGH/MEDIUM/LOW), 5) Type (bugs, security, performance, architecture, etc.). Format the output clearly with file paths.`;
+        ? `You are analyzing a codebase with ${fileCount} files (${filePaths}${moreFiles}). ${userPrompt}
+
+CRITICAL REQUIREMENTS:
+- Only report REAL, ACTIONABLE issues found in the actual code
+- Do NOT provide generic templates, examples, or placeholder text
+- Do NOT say "I don't have access to the code" or "provide code snippets"
+- Each issue MUST be specific to the actual file and code you're analyzing
+- Skip files that have no real issues - empty results are fine
+- Do NOT include meta-commentary like "To provide a thorough analysis..." or "I will outline potential issues..."
+
+For each REAL issue found, provide EXACTLY this format:
+- **File Path**: \`path/to/file.js\` (Line X)
+- **Description**: [Specific issue description based on actual code]
+- **Priority Level**: HIGH/MEDIUM/LOW
+- **Type**: [bugs/security/performance/architecture]
+
+Only include issues you can actually identify from the code provided. If a file has no issues, do not create fake issues.`
+        : `You are analyzing a codebase with ${fileCount} files (${filePaths}${moreFiles}).
+
+CRITICAL REQUIREMENTS:
+- Only report REAL, ACTIONABLE issues found in the actual code
+- Do NOT provide generic templates, examples, or placeholder text
+- Do NOT say "I don't have access to the code" or "provide code snippets"
+- Each issue MUST be specific to the actual file and code you're analyzing
+- Skip files that have no real issues - empty results are fine
+- Do NOT include meta-commentary like "To provide a thorough analysis..." or "I will outline potential issues..."
+
+For each REAL issue found, provide EXACTLY this format:
+- **File Path**: \`path/to/file.js\` (Line X)
+- **Description**: [Specific issue description based on actual code]
+- **Priority Level**: HIGH/MEDIUM/LOW
+- **Type**: [bugs/security/performance/architecture]
+
+Only include issues you can actually identify from the code provided. If a file has no issues, do not create fake issues.`;
 
       console.log("Executing Cline analysis...");
       const { stdout, stderr } = await executeCline(prompt, 600000);
@@ -1875,12 +1958,24 @@ Consider ALL of the following factors when scoring:
 11. Draft Status: Is this a draft PR (should not be merged yet)?
 12. Size: Is the PR too large? (${pr.additions + pr.deletions} lines changed)
 
-Provide:
-1. A score from 0-100 indicating merge readiness (consider ALL factors above)
-2. Detailed reasoning for the score (mention specific factors that influenced the score)
-3. Actionable recommendations for improvement (if score < 70, be specific about what needs to be fixed)
+IMPORTANT: Format your response EXACTLY as follows:
 
-Format your response clearly with the score prominently displayed.`;
+### Merge Readiness Score: **XX/100**
+
+IMPORTANT: The score you provide here (XX) MUST be the same score you calculate based on all the factors. Do NOT provide different scores in different sections.
+
+#### Detailed Analysis:
+[Provide comprehensive analysis here - this will be displayed to users]
+
+#### Detailed Reasoning:
+[Provide detailed reasoning here - this explains the score]
+
+#### Recommendations:
+- [Recommendation 1]
+- [Recommendation 2]
+- [etc.]
+
+CRITICAL: The score in "Merge Readiness Score: **XX/100**" MUST match the actual calculated score based on all factors. Do NOT provide conflicting scores.`;
 
     const tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "cline-pr-analysis-"));
     
@@ -1902,18 +1997,32 @@ Format your response clearly with the score prominently displayed.`;
       try {
         scoreResult = parseClinePRScore(analysisOutput);
       } catch (parseError) {
-        if (parseError instanceof Error && parseError.message.includes("Cline execution failed")) {
+        if (parseError instanceof Error && parseError.message.includes("Open AI execution failed")) {
           throw parseError;
         }
-        throw new Error(`Failed to parse Cline PR analysis: ${parseError instanceof Error ? parseError.message : "Unknown error"}. Raw output: ${analysisOutput.substring(0, 500)}`);
+        throw new Error(`Failed to parse Open AI PR analysis: ${parseError instanceof Error ? parseError.message : "Unknown error"}. Raw output: ${analysisOutput.substring(0, 500)}`);
+      }
+
+      // Extract score from analysis field if it exists and is different
+      let finalScore = scoreResult.score;
+      if (scoreResult.analysis) {
+        const analysisScoreMatch = scoreResult.analysis.match(/##\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/i) ||
+                                   scoreResult.analysis.match(/merge\s+readiness\s+score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/i);
+        if (analysisScoreMatch) {
+          const analysisScore = parseInt(analysisScoreMatch[1], 10);
+          if (!isNaN(analysisScore) && analysisScore >= 0 && analysisScore <= 100) {
+            finalScore = analysisScore;
+            console.log(`Extracted score ${finalScore} from analysis field (was ${scoreResult.score})`);
+          }
+        }
       }
 
       res.json({
         prNumber: parseInt(prNumber),
-        score: scoreResult.score,
+        score: finalScore,
         reasoning: scoreResult.reasoning,
         recommendations: scoreResult.recommendations,
-        analysis: analysisOutput.substring(0, 1000),
+        analysis: scoreResult.analysis || analysisOutput.substring(0, 1000),
         metadata: {
           isDraft: isDraft,
           mergeable: pr.mergeable,

@@ -60,7 +60,7 @@ function PRsList() {
   const [autoMerge, setAutoMerge] = useState(false);
   const [codeRabbitInstalled, setCodeRabbitInstalled] = useState<boolean | null>(null);
   const [analyzingPRs, setAnalyzingPRs] = useState<Set<number>>(new Set());
-  const [prScores, setPrScores] = useState<Map<number, { score: number; reasoning: string; recommendations: string[] }>>(new Map());
+  const [prScores, setPrScores] = useState<Map<number, { score: number; reasoning: string; recommendations: string[]; analysis?: string }>>(new Map());
   const API_URL = import.meta.env.VITE_API_URL || "https://autoauditserver.vercel.app";
 
   useEffect(() => {
@@ -338,7 +338,7 @@ function PRsList() {
             <>
               <div className="mb-6">
                 <p className="text-sm text-muted-foreground">
-                  Showing {pullRequests.length} open pull request{pullRequests.length !== 1 ? "s" : ""} - Use Cline AI to analyze PRs and get merge readiness scores (0-100)
+                  Showing {pullRequests.length} open pull request{pullRequests.length !== 1 ? "s" : ""} - Use AI analysis to review PRs and get merge readiness scores (0-100)
                 </p>
               </div>
               <div className="space-y-4">
@@ -449,11 +449,31 @@ function PRsList() {
                                     </div>
                                   </div>
                                   <div className="mt-4 p-3 rounded-lg bg-background/50 backdrop-blur-sm">
-                                    <p className="text-sm font-medium text-foreground leading-relaxed">
-                                      {prScores.get(pr.number)!.reasoning}
-                                    </p>
+                                    <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-wide">Detailed Analysis</p>
+                                    <div 
+                                      className="text-sm text-foreground leading-relaxed prose prose-invert max-w-none"
+                                      dangerouslySetInnerHTML={{
+                                        __html: (prScores.get(pr.number)!.analysis || "")
+                                          .replace(/##\s+Merge\s+Readiness\s+Score[:\s]*\*\*(\d{1,3})(?:\s*\/\s*100)?\*\*/gi, "")
+                                          .replace(/###\s+(.*?)(?=\n|$)/g, "<h3 class='text-base font-bold mt-3 mb-2'>$1</h3>")
+                                          .replace(/##\s+(.*?)(?=\n|$)/g, "<h2 class='text-lg font-bold mt-4 mb-2'>$1</h2>")
+                                          .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+                                          .replace(/\*(.*?)\*/g, "<em>$1</em>")
+                                          .replace(/`([^`]+)`/g, "<code class='bg-secondary px-1 rounded text-xs'>$1</code>")
+                                          .replace(/```[\s\S]*?```/g, (match) => {
+                                            const code = match.replace(/```[\w]*\n?/g, "").trim();
+                                            return `<pre class='bg-secondary p-2 rounded overflow-x-auto my-2'><code class='text-xs'>${code}</code></pre>`;
+                                          })
+                                          .replace(/^\d+\.\s+(.*?)$/gm, "<li class='ml-4 mb-1 list-disc'>$1</li>")
+                                          .replace(/^-\s+(.*?)$/gm, "<li class='ml-4 mb-1 list-disc'>$1</li>")
+                                          .replace(/\n\n/g, "</p><p class='mb-2'>")
+                                          .replace(/\n/g, "<br />")
+                                          .replace(/^/, "<p class='mb-2'>")
+                                          .replace(/$/, "</p>")
+                                      }}
+                                    />
                                   </div>
-                                  {prScores.get(pr.number)!.recommendations.length > 0 && (
+                                  {/* {prScores.get(pr.number)!.recommendations.length > 0 && (
                                     <div className="mt-4 p-3 rounded-lg bg-background/50 backdrop-blur-sm">
                                       <p className="text-xs font-semibold text-foreground mb-2 uppercase tracking-wide">Recommendations</p>
                                       <ul className="text-sm text-foreground space-y-1.5">
@@ -465,7 +485,7 @@ function PRsList() {
                                         ))}
                                       </ul>
                                     </div>
-                                  )}
+                                  )} */}
                                 </div>
                                 <div className={`flex-shrink-0 w-20 h-20 rounded-full flex items-center justify-center ${
                                   prScores.get(pr.number)!.score >= 70 
