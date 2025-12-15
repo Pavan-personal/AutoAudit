@@ -115,6 +115,62 @@ tasks:
             }
       
       REJECT:
+        - id: generate_response
+          type: io.kestra.plugin.scripts.python.Script
+          containerImage: python:3.11-slim
+          beforeCommands:
+            - pip install openai kestra
+          env:
+            OPENAI_API_KEY: "{{ secret('OPENAI_API_KEY') }}"
+            ISSUE_TITLE: "{{ trigger.body.issue_title }}"
+            COMMENTER_USERNAME: "{{ trigger.body.commenter_username }}"
+            COMMENT_BODY: "{{ trigger.body.comment_body }}"
+          script: |
+            import os
+            from openai import OpenAI
+            from kestra import Kestra
+            
+            client = OpenAI(api_key=os.environ['OPENAI_API_KEY'])
+            
+            issue_title = os.environ.get('ISSUE_TITLE', '')
+            commenter_username = os.environ.get('COMMENTER_USERNAME', '')
+            comment_body = os.environ.get('COMMENT_BODY', '')
+            
+            prompt = f"""Generate a friendly, conversational GitHub comment asking for more details about their approach.
+            
+            Context:
+            - User @{commenter_username} wants to work on issue: "{issue_title}"
+            - Their comment: "{comment_body}"
+            - Problem: They didn't explain HOW they'll solve it
+            
+            Requirements:
+            - Be friendly and encouraging (use emojis sparingly)
+            - Mention their username with @
+            - Ask them to explain their technical approach
+            - Make it feel personal, not robotic
+            - Keep it under 100 words
+            - Vary the wording each time (don't be repetitive)
+            
+            Example tones:
+            - "Hey @{commenter_username}! Excited you want to tackle this 🚀 Could you share how you're planning to solve it?"
+            - "Thanks for jumping in @{commenter_username}! Before I assign this, could you walk me through your approach?"
+            - "@{commenter_username} I'd love to assign this to you! Mind sharing your solution strategy first?"
+            
+            Generate a unique, conversational response:"""
+            
+            response = client.chat.completions.create(
+              model="gpt-4o-mini",
+              messages=[
+                {"role": "system", "content": "You are a friendly GitHub bot that encourages contributors while ensuring quality. Be conversational and vary your responses."},
+                {"role": "user", "content": prompt}
+              ],
+              temperature=0.8,
+              max_tokens=150
+            )
+            
+            dynamic_comment = response.choices[0].message.content.strip()
+            Kestra.outputs({'comment': dynamic_comment})
+        
         - id: request_more_details
           type: io.kestra.plugin.core.http.Request
           uri: "{{ trigger.body.backend_api_url }}/api/repositories/{{ trigger.body.owner }}/{{ trigger.body.repo }}/issues/{{ trigger.body.issue_number }}/comment"
@@ -122,7 +178,7 @@ tasks:
           contentType: application/json
           body: |
             {
-              "comment": "@{{ trigger.body.commenter_username }} Thanks for your interest in working on this issue! 🙌\n\nTo help ensure successful assignment, could you please provide a brief explanation of your proposed approach to solving this issue? This helps us match contributors with tasks they're well-prepared for.\n\nFor example:\n- What changes do you plan to make?\n- Which files or components will you modify?\n- Any technical details about your solution?\n\nLooking forward to your response!",
+              "comment": "{{ outputs.generate_response.vars.comment }}",
               "githubToken": "{{ trigger.body.github_token }}",
               "targetUsername": "{{ trigger.body.commenter_username }}"
             }
