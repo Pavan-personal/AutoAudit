@@ -69,13 +69,12 @@ async function handleIssueComment(payload: any) {
         repositoryName: repo,
         issueNumber: issueNumber,
       },
-      select: {
-        id: true,
-        issueNumber: true,
-        title: true,
-        body: true,
-        githubToken: true,
-        allowMultipleAssignees: true,
+      include: {
+        owner: {
+          select: {
+            githubToken: true,
+          },
+        },
       },
     });
     
@@ -110,7 +109,7 @@ async function handleIssueComment(payload: any) {
       commenter_id: comment.user.id,
       issue_title: issue.title,
       issue_body: issue.body || "",
-      github_token: automatedIssue.githubToken,
+      github_token: automatedIssue.owner.githubToken,
       backend_api_url: process.env.BACKEND_URL || "https://autoauditserver.vercel.app",
       comment_created_at: comment.created_at,
     };

@@ -17,6 +17,8 @@ model User {
   appInstalled Boolean   @default(false)
   createdAt    DateTime  @default(now())
   
+  automatedIssues AutomatedIssue[]
+  
   @@index([githubId])
   @@index([email])
 }
@@ -49,7 +51,7 @@ model AutomatedIssue {
   allowMultipleAssignees Boolean @default(false)
   assignedTo      String?
   userId          String
-  githubToken     String?  // Token for Kestra to call GitHub API
+  owner           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAtDb     DateTime @default(now())
   
   @@unique([repositoryOwner, repositoryName, issueNumber])

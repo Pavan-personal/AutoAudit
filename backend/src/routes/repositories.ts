@@ -1137,7 +1137,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
                 comments,
                 updatedAt,
                 autoAssign: true,
-                githubToken: user.githubToken,
                 allowMultipleAssignees: allowMultipleAssignees ?? false,
               },
               create: {
@@ -1157,7 +1156,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
                 updatedAt,
                 autoAssign: true,
                 userId: user.id,
-                githubToken: user.githubToken,
                 allowMultipleAssignees: allowMultipleAssignees ?? false,
               },
             });
@@ -1193,12 +1191,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
       updatedAt,
     } = req.body;
 
-    // Get user's GitHub token
-    const sessionUser = await prisma.user.findUnique({
-      where: { id: userId },
-      select: { githubToken: true },
-    });
-
     const automatedIssue = await prisma.automatedIssue.upsert({
       where: {
         repositoryOwner_repositoryName_issueNumber: {
@@ -1218,7 +1210,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
         comments,
         updatedAt,
         autoAssign: true,
-        githubToken: sessionUser?.githubToken,
       },
       create: {
         repositoryOwner: owner,
@@ -1237,7 +1228,6 @@ router.post("/:owner/:repo/automated-issues", async (req: Request, res: Response
         updatedAt,
         autoAssign: true,
         userId: userId,
-        githubToken: sessionUser?.githubToken,
       },
     });
 
