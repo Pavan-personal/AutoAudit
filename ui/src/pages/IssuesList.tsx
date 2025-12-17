@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Issue {
   id: number;
@@ -232,25 +233,28 @@ function IssuesList() {
                 </p>
               </div>
             </div>
-            <Button
-              onClick={() => navigate(`/repositories/${owner}/${repo}/kestra-setup`)}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <Settings className="w-4 h-4" />
-              Kestra Setup
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => navigate(`/repositories/${owner}/${repo}/kestra-setup`)}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <Settings className="w-4 h-4" />
+                Kestra Setup
+              </Button>
+              <ThemeToggle />
+            </div>
           </div>
 
           {!kestraConfigured && (
-            <Alert className="mb-6 border-amber-500/50 bg-amber-500/5">
-              <AlertCircle className="h-4 w-4 text-amber-500" />
-              <AlertTitle>Kestra Setup Required</AlertTitle>
-              <AlertDescription>
+            <Alert className="mb-6 border-blue-500/30 bg-blue-500/5">
+              <AlertCircle className="h-4 w-4 text-blue-400" />
+              <AlertTitle className="text-blue-300">Kestra Setup Required</AlertTitle>
+              <AlertDescription className="text-blue-200/80">
                 To enable live AI-powered automation, you need to setup Kestra locally first.{" "}
                 <Button
                   variant="link"
-                  className="p-0 h-auto font-semibold text-amber-600 hover:text-amber-700"
+                  className="p-0 h-auto font-semibold text-blue-400 hover:text-blue-300"
                   onClick={() => navigate(`/repositories/${owner}/${repo}/kestra-setup`)}
                 >
                   Complete setup now →

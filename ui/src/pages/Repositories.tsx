@@ -4,6 +4,7 @@ import { Github, Search, ArrowLeft, Folder, Sparkles, Brain } from "lucide-react
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Repository {
   id: number;
@@ -130,6 +131,7 @@ function Repositories() {
                 </p>
               </div>
             </div>
+            <ThemeToggle />
           </div>
 
           <div className="mb-6">

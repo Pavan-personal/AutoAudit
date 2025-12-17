@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const KestraSetup = () => {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
@@ -517,7 +518,7 @@ triggers:
             >
               <ArrowLeft className="w-4 h-4" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-4xl font-bold mb-2 flex items-center gap-2">
                 <Settings className="w-8 h-8" />
                 Kestra Setup
@@ -526,6 +527,7 @@ triggers:
                 {owner}/{repo} - Configure AI-powered issue automation
               </p>
             </div>
+            <ThemeToggle />
           </div>
 
           <Alert className="mb-6 border-primary/50 bg-primary/5">
@@ -719,17 +721,10 @@ triggers:
                 Step 4: Deploy Kestra Workflow
               </CardTitle>
               <CardDescription>
-                Open the ngrok tunnel URL (NOT localhost:8080) and create the workflow
+                Open the ngrok tunnel URL (eg: https://abc123.ngrok.io) and create the workflow
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Alert className="border-amber-500/50 bg-amber-500/5">
-                <Info className="h-4 w-4 text-amber-500" />
-                <AlertTitle>Important</AlertTitle>
-                <AlertDescription>
-                  Use the <strong>ngrok https URL</strong> from Step 3 to access Kestra UI, not localhost:8080
-                </AlertDescription>
-              </Alert>
               <div className="relative">
                 <pre className="bg-[#1e1e1e] text-[#d4d4d4] p-4 rounded-lg overflow-x-auto text-xs font-mono max-h-96 border border-zinc-700">
                   <code className="language-yaml">{getWorkflowYaml()}</code>
