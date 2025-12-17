@@ -11,17 +11,19 @@ const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "your-jwt-secret-change-in-production";
 
 // Kestra configuration endpoint
-router.post("/:owner/:repo/kestra-config", async (req: Request, res: Response) => {
+router.post("/:owner/:repo/kestra-config", async (req: Request, res: Response): Promise<void> => {
   try {
     const { kestraWebhookUrl, webhookSecret } = req.body;
 
     if (!kestraWebhookUrl || !webhookSecret) {
-      return res.status(400).json({ error: "Missing required fields" });
+      res.status(400).json({ error: "Missing required fields" });
+      return;
     }
 
     const userId = req.session?.userId;
     if (!userId) {
-      return res.status(401).json({ error: "Unauthorized" });
+      res.status(401).json({ error: "Unauthorized" });
+      return;
     }
 
     // Extract domain from webhook URL
@@ -1291,7 +1293,7 @@ router.post("/:owner/:repo/issues/:number/assign", async (req: Request, res: Res
     }
 
     if (!githubToken) {
-      res.status(400).json({ error: "GitHub token is required" });
+      res.status(400).json({ error: "Gi8tHub token is required" });
       return;
     }
 
@@ -1508,263 +1510,6 @@ router.get("/:owner/:repo/pull-requests", async (req: Request, res: Response) =>
     } else {
       res.status(500).json({ error: "Internal server error" });
     }
-  }
-});
-
-router.get("/:owner/:repo/automated-prs", async (req: Request, res: Response) => {
-  try {
-    const { owner, repo } = req.params;
-    const userId = req.session?.userId;
-    
-    if (!userId) {
-      const authToken = req.cookies?.authToken;
-      if (authToken) {
-        try {
-          const decoded = jwt.verify(authToken, JWT_SECRET) as { userId: string };
-          const user = await prisma.user.findUnique({
-            where: { id: decoded.userId },
-            select: { id: true },
-          });
-          if (user) {
-            const prs = await prisma.automatedPR.findMany({
-              where: {
-                repositoryOwner: owner,
-                repositoryName: repo,
-                userId: user.id,
-              },
-              select: {
-                prNumber: true,
-                aiAnalysis: true,
-                autoMerge: true,
-                merged: true,
-              },
-            });
-            res.json({ pullRequests: prs });
-            return;
-          }
-        } catch (err) {
-          console.error("JWT verification failed:", err);
-        }
-      }
-      res.status(401).json({ error: "Not authenticated" });
-      return;
-    }
-
-    const prs = await prisma.automatedPR.findMany({
-      where: {
-        repositoryOwner: owner,
-        repositoryName: repo,
-        userId: userId,
-      },
-      select: {
-        prNumber: true,
-        aiAnalysis: true,
-        autoMerge: true,
-        merged: true,
-      },
-    });
-
-    res.json({ pullRequests: prs });
-  } catch (error: unknown) {
-    console.error("Error fetching automated PRs:", error);
-    res.status(500).json({ error: "Internal server error" });
-  }
-});
-
-router.post("/:owner/:repo/automated-prs", async (req: Request, res: Response) => {
-  try {
-    const { owner, repo } = req.params;
-    const userId = req.session?.userId;
-    
-    if (!userId) {
-      const authToken = req.cookies?.authToken;
-      if (authToken) {
-        try {
-          const decoded = jwt.verify(authToken, JWT_SECRET) as { userId: string };
-          const user = await prisma.user.findUnique({
-            where: { id: decoded.userId },
-            select: { id: true },
-          });
-          if (user) {
-            const {
-              prNumber,
-              prId,
-              title,
-              body,
-              state,
-              htmlUrl,
-              head,
-              base,
-              user: prUser,
-              labels,
-              comments,
-              reviewComments,
-              commits,
-              additions,
-              deletions,
-              changedFiles,
-              createdAt,
-              updatedAt,
-              mergedAt,
-              aiAnalysis,
-              autoMerge,
-            } = req.body;
-
-            const automatedPR = await prisma.automatedPR.upsert({
-              where: {
-                repositoryOwner_repositoryName_prNumber: {
-                  repositoryOwner: owner,
-                  repositoryName: repo,
-                  prNumber: prNumber,
-                },
-              },
-              update: {
-                title,
-                body,
-                state,
-                htmlUrl,
-                head,
-                base,
-                user: prUser,
-                labels,
-                comments,
-                reviewComments,
-                commits,
-                additions,
-                deletions,
-                changedFiles,
-                updatedAt,
-                mergedAt,
-                aiAnalysis: aiAnalysis || false,
-                autoMerge: autoMerge || false,
-                merged: mergedAt ? true : false,
-              },
-              create: {
-                repositoryOwner: owner,
-                repositoryName: repo,
-                prNumber,
-                prId,
-                title,
-                body,
-                state,
-                htmlUrl,
-                head,
-                base,
-                user: prUser,
-                labels,
-                comments,
-                reviewComments,
-                commits,
-                additions,
-                deletions,
-                changedFiles,
-                createdAt,
-                updatedAt,
-                mergedAt,
-                aiAnalysis: aiAnalysis || false,
-                autoMerge: autoMerge || false,
-                merged: mergedAt ? true : false,
-                userId: user.id,
-              },
-            });
-
-            res.json({ pullRequest: automatedPR });
-            return;
-          }
-        } catch (err) {
-          console.error("JWT verification failed:", err);
-        }
-      }
-      res.status(401).json({ error: "Not authenticated" });
-      return;
-    }
-
-    const {
-      prNumber,
-      prId,
-      title,
-      body,
-      state,
-      htmlUrl,
-      head,
-      base,
-      user: prUser,
-      labels,
-      comments,
-      reviewComments,
-      commits,
-      additions,
-      deletions,
-      changedFiles,
-      createdAt,
-      updatedAt,
-      mergedAt,
-      aiAnalysis,
-      autoMerge,
-    } = req.body;
-
-    const automatedPR = await prisma.automatedPR.upsert({
-      where: {
-        repositoryOwner_repositoryName_prNumber: {
-          repositoryOwner: owner,
-          repositoryName: repo,
-          prNumber: prNumber,
-        },
-      },
-      update: {
-        title,
-        body,
-        state,
-        htmlUrl,
-        head,
-        base,
-        user: prUser,
-        labels,
-        comments,
-        reviewComments,
-        commits,
-        additions,
-        deletions,
-        changedFiles,
-        updatedAt,
-        mergedAt,
-        aiAnalysis: aiAnalysis || false,
-        autoMerge: autoMerge || false,
-        merged: mergedAt ? true : false,
-      },
-      create: {
-        repositoryOwner: owner,
-        repositoryName: repo,
-        prNumber,
-        prId,
-        title,
-        body,
-        state,
-        htmlUrl,
-        head,
-        base,
-        user: prUser,
-        labels,
-        comments,
-        reviewComments,
-        commits,
-        additions,
-        deletions,
-        changedFiles,
-        createdAt,
-        updatedAt,
-        mergedAt,
-        aiAnalysis: aiAnalysis || false,
-        autoMerge: autoMerge || false,
-        merged: mergedAt ? true : false,
-        userId: userId,
-      },
-    });
-
-    res.json({ pullRequest: automatedPR });
-  } catch (error: unknown) {
-    console.error("Error saving automated PR:", error);
-    res.status(500).json({ error: "Internal server error" });
   }
 });
 
