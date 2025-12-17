@@ -54,8 +54,6 @@ model AutomatedIssue {
   assignedTo      String?
   userId          String
   owner           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  kestraWebhookUrl String?
-  webhookSecret   String?
   createdAtDb     DateTime @default(now())
   
   @@unique([repositoryOwner, repositoryName, issueNumber])

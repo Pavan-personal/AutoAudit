@@ -13,7 +13,6 @@ const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "your
 // Kestra configuration endpoint
 router.post("/:owner/:repo/kestra-config", async (req: Request, res: Response) => {
   try {
-    const { owner, repo } = req.params;
     const { kestraWebhookUrl, webhookSecret } = req.body;
 
     if (!kestraWebhookUrl || !webhookSecret) {
@@ -25,16 +24,16 @@ router.post("/:owner/:repo/kestra-config", async (req: Request, res: Response) =
       return res.status(401).json({ error: "Unauthorized" });
     }
 
-    // Update all automated issues for this repository
-    await prisma.automatedIssue.updateMany({
-      where: {
-        repositoryOwner: owner,
-        repositoryName: repo,
-        userId: userId,
-      },
+    // Extract domain from webhook URL
+    const urlMatch = kestraWebhookUrl.match(/https?:\/\/([^/]+)/);
+    const domain = urlMatch ? urlMatch[1] : kestraWebhookUrl;
+
+    // Update user's Kestra config
+    await prisma.user.update({
+      where: { id: userId },
       data: {
-        kestraWebhookUrl,
-        webhookSecret,
+        kestraWebhookUrlDomain: domain,
+        kestraWebhookSecret: webhookSecret,
       },
     });
 

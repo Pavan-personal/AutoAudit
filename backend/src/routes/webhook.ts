@@ -73,6 +73,8 @@ async function handleIssueComment(payload: any) {
         owner: {
           select: {
             githubToken: true,
+            kestraWebhookUrlDomain: true,
+            kestraWebhookSecret: true,
           },
         },
       },
@@ -94,11 +96,14 @@ async function handleIssueComment(payload: any) {
     
     console.log(`[WEBHOOK] Issue #${issueNumber} is automated! Forwarding to Kestra...`);
     
-    // Use Kestra URL from database if configured, otherwise fall back to env variable
-    const kestraUrl = automatedIssue.kestraWebhookUrl || KESTRA_WEBHOOK_URL;
+    // Get user's Kestra config
+    const kestraConfig = automatedIssue.owner;
+    const kestraUrl = kestraConfig.kestraWebhookUrlDomain && kestraConfig.kestraWebhookSecret
+      ? `https://${kestraConfig.kestraWebhookUrlDomain}/api/v1/executions/webhook/autoaudit/issue-assignment-automation/${kestraConfig.kestraWebhookSecret}`
+      : KESTRA_WEBHOOK_URL;
     
     if (!kestraUrl) {
-      console.error("[WEBHOOK] No Kestra webhook URL configured for this issue!");
+      console.error("[WEBHOOK] No Kestra webhook URL configured for this user!");
       return;
     }
     

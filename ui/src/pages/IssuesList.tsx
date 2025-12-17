@@ -102,17 +102,29 @@ function IssuesList() {
         if (response.ok) {
           const data = await response.json();
           setAutomatedIssues(new Set(data.issues.map((issue: { issueNumber: number }) => issue.issueNumber)));
-          
-          // Check if Kestra is configured for any automated issue
-          const hasKestraConfig = data.issues.some((issue: { kestraWebhookUrl: string | null }) => issue.kestraWebhookUrl);
-          setKestraConfigured(hasKestraConfig);
         }
       } catch (error) {
         console.error("Error fetching automated issues:", error);
       }
     }
     
+    async function checkKestraConfig() {
+      try {
+        const response = await fetch(`${API_URL}/api/user`, {
+          method: "GET",
+          credentials: "include",
+        });
+        if (response.ok) {
+          const userData = await response.json();
+          setKestraConfigured(!!userData.kestraWebhookUrlDomain && !!userData.kestraWebhookSecret);
+        }
+      } catch (error) {
+        console.error("Error checking Kestra config:", error);
+      }
+    }
+    
     fetchAutomatedIssues();
+    checkKestraConfig();
   }, [owner, repo, navigate, API_URL]);
   
   async function handleAutomate(issue: Issue) {
