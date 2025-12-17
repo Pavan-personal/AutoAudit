@@ -49,18 +49,9 @@ const KestraSetup = () => {
     const base64ApiKey = btoa(apiKey || "your-api-key-here");
     const base64Secret = btoa(webhookSecret || "your-webhook-secret");
     
-    const baseCommand = `docker run --pull=always --rm -it -p 8080:8080 --user=root \\
-  -v /var/run/docker.sock:/var/run/docker.sock \\
-  -v /tmp:/tmp \\
-  -e "SECRET_${aiProvider.toUpperCase()}_API_KEY=${base64ApiKey}" \\
-  -e "SECRET_WEBHOOK_SECRET_KEY=${base64Secret}" \\
-  kestra/kestra:latest server local`;
-
-    if (os === "macos") {
-      return `-e JAVA_OPTS="-XX:UseSVE=0" \\
-  ` + baseCommand;
-    }
-    return baseCommand;
+    const javaOpts = os === "macos" ? '-e JAVA_OPTS="-XX:UseSVE=0" \\\n  ' : '';
+    
+    return `docker run --pull=always --rm -it -p 8080:8080 --user=root \\n  ${javaOpts}-v /var/run/docker.sock:/var/run/docker.sock \\n  -v /tmp:/tmp \\n  -e "SECRET_${aiProvider.toUpperCase()}_API_KEY=${base64ApiKey}" \\n  -e "SECRET_WEBHOOK_SECRET_KEY=${base64Secret}" \\n  kestra/kestra:latest server local`;
   };
 
   const getWorkflowYaml = () => {
