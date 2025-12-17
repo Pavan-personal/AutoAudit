@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Github, MessageSquare, User, Calendar, Tag, AlertCircle, Sparkles, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Github, MessageSquare, User, Calendar, Tag, AlertCircle, Sparkles, CheckCircle2, Settings } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,7 @@ function IssuesList() {
   const navigate = useNavigate();
   const [issues, setIssues] = useState<Issue[]>([]);
   const [automatedIssues, setAutomatedIssues] = useState<Set<number>>(new Set());
+  const [kestraConfigured, setKestraConfigured] = useState<boolean>(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [automateDialog, setAutomateDialog] = useState<{ open: boolean; issue: Issue | null }>({ open: false, issue: null });
@@ -100,6 +102,10 @@ function IssuesList() {
         if (response.ok) {
           const data = await response.json();
           setAutomatedIssues(new Set(data.issues.map((issue: { issueNumber: number }) => issue.issueNumber)));
+          
+          // Check if Kestra is configured for any automated issue
+          const hasKestraConfig = data.issues.some((issue: { kestraWebhookUrl: string | null }) => issue.kestraWebhookUrl);
+          setKestraConfigured(hasKestraConfig);
         }
       } catch (error) {
         console.error("Error fetching automated issues:", error);
@@ -115,6 +121,15 @@ function IssuesList() {
   
   async function confirmAutomate() {
     if (!automateDialog.issue || !owner || !repo) return;
+    
+    // Check if Kestra is configured
+    if (automatedIssues.size === 0 && !kestraConfigured) {
+      toast.error("Kestra Setup Required", {
+        description: "Please configure Kestra before automating issues.",
+      });
+      navigate(`/repositories/${owner}/${repo}/kestra-setup`);
+      return;
+    }
     
     try {
       const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/automated-issues`, {
@@ -205,7 +220,32 @@ function IssuesList() {
                 </p>
               </div>
             </div>
+            <Button
+              onClick={() => navigate(`/repositories/${owner}/${repo}/kestra-setup`)}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              Kestra Setup
+            </Button>
           </div>
+
+          {!kestraConfigured && automatedIssues.size === 0 && (
+            <Alert className="mb-6 border-amber-500/50 bg-amber-500/5">
+              <AlertCircle className="h-4 w-4 text-amber-500" />
+              <AlertTitle>Kestra Setup Required</AlertTitle>
+              <AlertDescription>
+                To enable AI-powered automation, you need to configure Kestra first.{" "}
+                <Button
+                  variant="link"
+                  className="p-0 h-auto font-semibold text-amber-600 hover:text-amber-700"
+                  onClick={() => navigate(`/repositories/${owner}/${repo}/kestra-setup`)}
+                >
+                  Set up now →
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {issues.length === 0 ? (
             <Card>
@@ -468,7 +508,7 @@ function IssuesList() {
               Add this issue to automated tracking. AI will analyze comments and assign based on comment intent.
             </DialogDescription>
           </DialogHeader>
-          <div className="py-4 space-y-4">
+          <div className="py-4 space-y-6">
             <div className="flex items-start space-x-3">
               <div className="flex-shrink-0 pt-0.5">
                 <div className="w-7 h-7 rounded-full bg-primary/20 flex items-center justify-center">
@@ -485,22 +525,27 @@ function IssuesList() {
               </div>
             </div>
             
-            <div className="flex items-center space-x-2 pt-2 border-t">
-              <Checkbox 
-                id="multipleAssignees" 
-                checked={allowMultipleAssignees}
-                onCheckedChange={(checked) => setAllowMultipleAssignees(checked as boolean)}
-              />
-              <label
-                htmlFor="multipleAssignees"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-              >
-                Allow Multiple Assignees
-              </label>
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0 pt-0.5">
+                <Checkbox 
+                  id="multipleAssignees" 
+                  checked={allowMultipleAssignees}
+                  onCheckedChange={(checked) => setAllowMultipleAssignees(checked as boolean)}
+                  className="mt-0.5"
+                />
+              </div>
+              <div className="flex-1">
+                <label
+                  htmlFor="multipleAssignees"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Allow Multiple Assignees
+                </label>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Enable this to allow multiple contributors to be assigned to this issue. If disabled, only the first person with a valid approach will be assigned.
+                </p>
+              </div>
             </div>
-            <p className="text-xs text-muted-foreground ml-6">
-              Enable this to allow multiple contributors to be assigned to this issue. If disabled, only the first person with a valid approach will be assigned.
-            </p>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAutomateDialog({ open: false, issue: null })}>

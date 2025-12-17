@@ -94,8 +94,11 @@ async function handleIssueComment(payload: any) {
     
     console.log(`[WEBHOOK] Issue #${issueNumber} is automated! Forwarding to Kestra...`);
     
-    if (!KESTRA_WEBHOOK_URL) {
-      console.error("[WEBHOOK] KESTRA_WEBHOOK_URL not configured!");
+    // Use Kestra URL from database if configured, otherwise fall back to env variable
+    const kestraUrl = automatedIssue.kestraWebhookUrl || KESTRA_WEBHOOK_URL;
+    
+    if (!kestraUrl) {
+      console.error("[WEBHOOK] No Kestra webhook URL configured for this issue!");
       return;
     }
     
@@ -117,7 +120,7 @@ async function handleIssueComment(payload: any) {
     console.log(`[WEBHOOK] Sending to Kestra:`, JSON.stringify(kestraPayload, null, 2));
     
     // Forward to Kestra webhook
-    const kestraResponse = await axios.post(KESTRA_WEBHOOK_URL, kestraPayload, {
+    const kestraResponse = await axios.post(kestraUrl, kestraPayload, {
       headers: {
         "Content-Type": "application/json",
       },

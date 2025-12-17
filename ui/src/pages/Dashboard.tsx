@@ -23,21 +23,7 @@ function Dashboard() {
   useEffect(() => {
     async function fetchUser() {
       try {
-        console.log("\n[FRONTEND] ====== FETCH USER ======");
-        console.log("[FRONTEND] API_URL:", API_URL);
-        console.log("[FRONTEND] Current URL:", window.location.href);
-        console.log("[FRONTEND] Cookies before request:", document.cookie || "none");
-        
         const requestUrl = `${API_URL}/auth/me`;
-        console.log("[FRONTEND] Request URL:", requestUrl);
-        console.log("[FRONTEND] Request options:", {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-
         const response = await fetch(requestUrl, {
           method: "GET",
           credentials: "include",
@@ -46,13 +32,8 @@ function Dashboard() {
           },
         });
 
-        console.log("[FRONTEND] Response status:", response.status);
-        console.log("[FRONTEND] Response headers:", Object.fromEntries(response.headers.entries()));
-        console.log("[FRONTEND] Cookies after request:", document.cookie || "none");
-
         if (!response.ok) {
           if (response.status === 401) {
-            console.log("Unauthorized - redirecting to home");
             navigate("/");
             return;
           }
@@ -60,7 +41,6 @@ function Dashboard() {
         }
 
         const data = await response.json();
-        console.log("User data received:", data);
         setUser(data.user);
         setLoading(false);
       } catch (error) {

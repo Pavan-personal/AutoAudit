@@ -10,6 +10,41 @@ const router = express.Router();
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || process.env.SESSION_SECRET || "your-jwt-secret-change-in-production";
 
+// Kestra configuration endpoint
+router.post("/:owner/:repo/kestra-config", async (req: Request, res: Response) => {
+  try {
+    const { owner, repo } = req.params;
+    const { kestraWebhookUrl, webhookSecret } = req.body;
+
+    if (!kestraWebhookUrl || !webhookSecret) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const userId = req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    // Update all automated issues for this repository
+    await prisma.automatedIssue.updateMany({
+      where: {
+        repositoryOwner: owner,
+        repositoryName: repo,
+        userId: userId,
+      },
+      data: {
+        kestraWebhookUrl,
+        webhookSecret,
+      },
+    });
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error("Error saving Kestra config:", error);
+    res.status(500).json({ error: "Failed to save configuration" });
+  }
+});
+
 const GITHUB_APP_ID = process.env.GITHUB_APP_ID;
 const GITHUB_PRIVATE_KEY = process.env.GITHUB_PRIVATE_KEY;
 const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
