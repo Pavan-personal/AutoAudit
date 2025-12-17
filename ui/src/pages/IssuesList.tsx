@@ -128,20 +128,20 @@ function IssuesList() {
   }, [owner, repo, navigate, API_URL]);
   
   async function handleAutomate(issue: Issue) {
+    // Check if Kestra is configured
+    if (!kestraConfigured) {
+      toast.error("Kestra Setup Required", {
+        description: "Please complete Kestra setup first to enable automation.",
+      });
+      navigate(`/repositories/${owner}/${repo}/kestra-setup`);
+      return;
+    }
+    
     setAutomateDialog({ open: true, issue });
   }
   
   async function confirmAutomate() {
     if (!automateDialog.issue || !owner || !repo) return;
-    
-    // Check if Kestra is configured
-    if (automatedIssues.size === 0 && !kestraConfigured) {
-      toast.error("Kestra Setup Required", {
-        description: "Please configure Kestra before automating issues.",
-      });
-      navigate(`/repositories/${owner}/${repo}/kestra-setup`);
-      return;
-    }
     
     try {
       const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/automated-issues`, {
@@ -242,18 +242,18 @@ function IssuesList() {
             </Button>
           </div>
 
-          {!kestraConfigured && automatedIssues.size === 0 && (
+          {!kestraConfigured && (
             <Alert className="mb-6 border-amber-500/50 bg-amber-500/5">
               <AlertCircle className="h-4 w-4 text-amber-500" />
               <AlertTitle>Kestra Setup Required</AlertTitle>
               <AlertDescription>
-                To enable AI-powered automation, you need to configure Kestra first.{" "}
+                To enable live AI-powered automation, you need to setup Kestra locally first.{" "}
                 <Button
                   variant="link"
                   className="p-0 h-auto font-semibold text-amber-600 hover:text-amber-700"
                   onClick={() => navigate(`/repositories/${owner}/${repo}/kestra-setup`)}
                 >
-                  Set up now →
+                  Complete setup now →
                 </Button>
               </AlertDescription>
             </Alert>
@@ -381,11 +381,7 @@ function IssuesList() {
                               Automated
                             </Button>
                           ) : (
-                            <Button 
-                              onClick={() => handleAutomate(issue)}
-                              disabled={!kestraConfigured}
-                              title={!kestraConfigured ? "Kestra setup required" : ""}
-                            >
+                            <Button onClick={() => handleAutomate(issue)}>
                               <Sparkles className="w-4 h-4 mr-2" />
                               Automate
                             </Button>
@@ -494,11 +490,7 @@ function IssuesList() {
                               Automated
                             </Button>
                           ) : (
-                            <Button 
-                              onClick={() => handleAutomate(issue)}
-                              disabled={!kestraConfigured}
-                              title={!kestraConfigured ? "Kestra setup required" : ""}
-                            >
+                            <Button onClick={() => handleAutomate(issue)}>
                               <Sparkles className="w-4 h-4 mr-2" />
                               Automate
                             </Button>
