@@ -128,6 +128,7 @@ import repositoriesRoutes from "./routes/repositories";
 
 app.use("/auth", authRoutes);
 app.use("/webhook", webhookRoutes);
+app.use("/api", authRoutes);
 app.use("/api/repositories", repositoriesRoutes);
 
 app.listen(PORT, () => {

@@ -31,6 +31,10 @@ const KestraSetup = () => {
           credentials: "include",
         });
         if (!response.ok) {
+          const data = await response.json();
+          if (data.expired) {
+            toast.error("Session expired. Please log in again.");
+          }
           navigate("/");
         }
       } catch {

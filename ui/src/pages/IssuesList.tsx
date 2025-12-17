@@ -381,7 +381,11 @@ function IssuesList() {
                               Automated
                             </Button>
                           ) : (
-                            <Button onClick={() => handleAutomate(issue)}>
+                            <Button 
+                              onClick={() => handleAutomate(issue)}
+                              disabled={!kestraConfigured}
+                              title={!kestraConfigured ? "Kestra setup required" : ""}
+                            >
                               <Sparkles className="w-4 h-4 mr-2" />
                               Automate
                             </Button>
@@ -490,7 +494,11 @@ function IssuesList() {
                               Automated
                             </Button>
                           ) : (
-                            <Button onClick={() => handleAutomate(issue)}>
+                            <Button 
+                              onClick={() => handleAutomate(issue)}
+                              disabled={!kestraConfigured}
+                              title={!kestraConfigured ? "Kestra setup required" : ""}
+                            >
                               <Sparkles className="w-4 h-4 mr-2" />
                               Automate
                             </Button>

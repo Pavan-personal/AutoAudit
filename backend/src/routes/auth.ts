@@ -331,7 +331,10 @@ router.get("/me", async (req: Request, res: Response) => {
             req.session.save(() => {});
           }
         } catch (err) {
-          console.error("JWT verification failed:", err);
+          console.error("JWT verification failed - token expired:", err);
+          res.clearCookie("authToken");
+          res.status(401).json({ error: "Token expired", expired: true });
+          return;
         }
       }
     }
@@ -352,6 +355,8 @@ router.get("/me", async (req: Request, res: Response) => {
         image: true,
         githubId: true,
         createdAt: true,
+        kestraWebhookUrlDomain: true,
+        kestraWebhookSecret: true,
       },
     });
 
@@ -361,6 +366,61 @@ router.get("/me", async (req: Request, res: Response) => {
     }
 
     res.json({ user });
+  } catch (error) {
+    console.error("Get user error:", error);
+    res.status(500).json({ error: "Failed to get user" });
+  }
+});
+
+router.get("/user", async (req: Request, res: Response) => {
+  try {
+    let userId: string | undefined = req.session?.userId;
+    
+    if (!userId) {
+      const authToken = req.cookies?.authToken;
+      if (authToken) {
+        try {
+          const decoded = jwt.verify(authToken, JWT_SECRET) as { userId: string; email: string };
+          userId = decoded.userId;
+          
+          if (req.session) {
+            req.session.userId = userId;
+            req.session.save(() => {});
+          }
+        } catch (err) {
+          console.error("JWT verification failed - token expired:", err);
+          res.clearCookie("authToken");
+          res.status(401).json({ error: "Token expired", expired: true });
+          return;
+        }
+      }
+    }
+
+    if (!userId) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        image: true,
+        githubId: true,
+        createdAt: true,
+        kestraWebhookUrlDomain: true,
+        kestraWebhookSecret: true,
+      },
+    });
+
+    if (!user) {
+      res.status(404).json({ error: "User not found" });
+      return;
+    }
+
+    res.json(user);
   } catch (error) {
     console.error("Get user error:", error);
     res.status(500).json({ error: "Failed to get user" });
