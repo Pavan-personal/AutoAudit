@@ -15,7 +15,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Issue {
   id: number;
@@ -242,7 +241,6 @@ function IssuesList() {
                 <Settings className="w-4 h-4" />
                 Kestra Setup
               </Button>
-              <ThemeToggle />
             </div>
           </div>
 

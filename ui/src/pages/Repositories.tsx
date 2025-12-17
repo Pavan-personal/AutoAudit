@@ -4,7 +4,6 @@ import { Github, Search, ArrowLeft, Folder, Sparkles, Brain } from "lucide-react
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 interface Repository {
   id: number;
@@ -115,23 +114,20 @@ function Repositories() {
     <div className="min-h-screen bg-background">
       <div className="container-custom py-12">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={() => navigate("/dashboard")}
-                variant="outline"
-                size="icon"
-              >
-                <ArrowLeft className="w-4 h-4" />
-              </Button>
-              <div>
-                <h1 className="text-4xl font-bold mb-2">Repositories</h1>
-                <p className="text-muted-foreground">
-                  Select a repository to audit
-                </p>
-              </div>
+          <div className="flex items-center gap-4 mb-8">
+            <Button
+              onClick={() => navigate("/dashboard")}
+              variant="outline"
+              size="icon"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+            <div>
+              <h1 className="text-4xl font-bold mb-2">Repositories</h1>
+              <p className="text-muted-foreground">
+                Select a repository to audit
+              </p>
             </div>
-            <ThemeToggle />
           </div>
 
           <div className="mb-6">
@@ -159,22 +155,22 @@ function Repositories() {
           ) : (
             <div className="columns-1 md:columns-2 lg:columns-3 gap-6">
               {filteredRepos.map((repo) => (
-                <Card key={repo.id} className="glass-card-hover break-inside-avoid mb-6 w-full">
+                <Card key={repo.id} className="break-inside-avoid mb-6 w-full border-2 border-zinc-800 bg-zinc-900/50 hover:border-zinc-700 hover:bg-zinc-900 transition-all">
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Github className="w-5 h-5 text-muted-foreground flex-shrink-0" />
-                        <CardTitle className="text-lg truncate">{repo.name}</CardTitle>
+                        <Github className="w-5 h-5 text-zinc-400 flex-shrink-0" />
+                        <CardTitle className="text-lg truncate text-white">{repo.name}</CardTitle>
                       </div>
                     </div>
                     {repo.description && (
-                      <CardDescription className="line-clamp-2">
+                      <CardDescription className="line-clamp-2 text-zinc-400">
                         {repo.description}
                       </CardDescription>
                     )}
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div className="flex items-center justify-between text-sm text-zinc-400">
                       <div className="flex items-center gap-4">
                         {repo.language && (
                           <span>{repo.language}</span>
@@ -187,39 +183,39 @@ function Repositories() {
                     </div>
                     
                     <div className="space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Code Audit</p>
+                      <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Code Audit</p>
                       <div className="flex gap-2">
                         <Button
                           onClick={() => handleAudit(repo, false)}
                           variant="outline"
-                          className="flex-1 group hover:bg-primary/10 hover:border-primary/50 transition-all"
+                          className="flex-1 border-zinc-700 bg-zinc-800/50 text-white hover:bg-primary/20 hover:border-primary hover:text-primary transition-all"
                           size="sm"
                         >
-                          <Brain className="w-4 h-4 mr-2 group-hover:text-primary" />
+                          <Brain className="w-4 h-4 mr-2" />
                           Oumi
                         </Button>
                         <Button
                           onClick={() => handleAudit(repo, true)}
                           variant="outline"
-                          className="flex-1 group hover:bg-primary/10 hover:border-primary/50 transition-all"
+                          className="flex-1 border-zinc-700 bg-zinc-800/50 text-white hover:bg-primary/20 hover:border-primary hover:text-primary transition-all"
                           size="sm"
                         >
-                          <Sparkles className="w-4 h-4 mr-2 group-hover:text-primary" />
+                          <Sparkles className="w-4 h-4 mr-2" />
                           Full Scan
                         </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-zinc-500">
                         Oumi: Limited files, best response. Full Scan: Complete codebase scanning using advanced AI models and research.
                       </p>
                     </div>
                     
-                    <div className="pt-4 border-t border-border space-y-2">
-                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Management</p>
+                    <div className="pt-4 border-t border-zinc-800 space-y-2">
+                      <p className="text-xs font-medium text-zinc-500 uppercase tracking-wide">Management</p>
                       <div className="flex gap-2">
                         <Button
                           onClick={() => navigate(`/repositories/${repo.full_name}/issues-list`)}
                           variant="outline"
-                          className="flex-1"
+                          className="flex-1 border-zinc-700 bg-zinc-800/50 text-white hover:bg-zinc-700 hover:border-zinc-600"
                           size="sm"
                         >
                           Automate Issues
@@ -227,13 +223,13 @@ function Repositories() {
                         <Button
                           onClick={() => navigate(`/repositories/${repo.full_name}/prs-list`)}
                           variant="outline"
-                          className="flex-1"
+                          className="flex-1 border-zinc-700 bg-zinc-800/50 text-white hover:bg-zinc-700 hover:border-zinc-600"
                           size="sm"
                         >
                           Review PRs
                         </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-xs text-zinc-500">
                         Set up automated issue tracking and management, or analyze and review pull requests with AI-powered insights.
                       </p>
                     </div>

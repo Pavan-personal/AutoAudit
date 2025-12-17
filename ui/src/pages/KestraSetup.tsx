@@ -9,7 +9,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { ThemeToggle } from "@/components/ThemeToggle";
 
 const KestraSetup = () => {
   const { owner, repo } = useParams<{ owner: string; repo: string }>();
@@ -51,7 +50,12 @@ const KestraSetup = () => {
     
     const javaOpts = os === "macos" ? '-e JAVA_OPTS="-XX:UseSVE=0" \\\n  ' : '';
     
-    return `docker run --pull=always --rm -it -p 8080:8080 --user=root \\n  ${javaOpts}-v /var/run/docker.sock:/var/run/docker.sock \\n  -v /tmp:/tmp \\n  -e "SECRET_${aiProvider.toUpperCase()}_API_KEY=${base64ApiKey}" \\n  -e "SECRET_WEBHOOK_SECRET_KEY=${base64Secret}" \\n  kestra/kestra:latest server local`;
+    return `docker run --pull=always --rm -it -p 8080:8080 --user=root 
+  ${javaOpts}-v /var/run/docker.sock:/var/run/docker.sock 
+  -v /tmp:/tmp 
+  -e "SECRET_${aiProvider.toUpperCase()}_API_KEY=${base64ApiKey}" 
+  -e "SECRET_WEBHOOK_SECRET_KEY=${base64Secret}" 
+  kestra/kestra:latest server local`;
   };
 
   const getWorkflowYaml = () => {
@@ -518,7 +522,6 @@ triggers:
                 {owner}/{repo} - Configure AI-powered issue automation
               </p>
             </div>
-            <ThemeToggle />
           </div>
 
           <Alert className="mb-6 border-primary/50 bg-primary/5">
