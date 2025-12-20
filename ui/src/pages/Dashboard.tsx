@@ -34,6 +34,13 @@ function Dashboard() {
 
         if (!response.ok) {
           if (response.status === 401) {
+            const data = await response.json().catch(() => ({}));
+            if (data.expired) {
+              // Token expired - clear everything and redirect to landing
+              document.cookie.split(";").forEach((c) => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+              });
+            }
             navigate("/");
             return;
           }
@@ -62,9 +69,19 @@ function Dashboard() {
         method: "POST",
         credentials: "include",
       });
+      
+      // Clear all cookies on client side
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      
       navigate("/");
     } catch (error) {
       console.error("Error logging out:", error);
+      // Even if logout fails, clear cookies and redirect
+      document.cookie.split(";").forEach((c) => {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
       navigate("/");
     }
   }

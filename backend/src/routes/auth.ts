@@ -428,6 +428,23 @@ router.get("/user", async (req: Request, res: Response) => {
 });
 
 router.post("/logout", (req: Request, res: Response) => {
+  // Clear the authToken cookie
+  res.clearCookie("authToken", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    path: "/",
+  });
+  
+  // Clear the session cookie
+  res.clearCookie("sessionId", {
+    httpOnly: true,
+    secure: true,
+    sameSite: "none",
+    path: "/",
+  });
+  
+  // Destroy session
   req.session.destroy((err) => {
     if (err) {
       res.status(500).json({ error: "Failed to logout" });

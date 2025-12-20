@@ -39,7 +39,14 @@ function Repositories() {
 
         if (!response.ok) {
           if (response.status === 401) {
-            navigate("/dashboard");
+            const data = await response.json().catch(() => ({}));
+            if (data.expired) {
+              // Token expired - clear cookies and redirect to landing
+              document.cookie.split(";").forEach((c) => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+              });
+            }
+            navigate("/");
             return;
           }
           throw new Error(`HTTP error! status: ${response.status}`);

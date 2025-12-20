@@ -35,10 +35,10 @@ const KestraSetup = () => {
           if (data.expired) {
             toast.error("Session expired. Please log in again.");
           }
-          // navigate("/");
+          navigate("/");
         }
       } catch {
-        // navigate("/"); 
+        navigate("/"); 
       }
     }
     checkAuth();
