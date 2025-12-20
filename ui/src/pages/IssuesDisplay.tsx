@@ -13,20 +13,6 @@ interface Issue {
   tags: string[];
 }
 
-interface FileResult {
-  file: string;
-  status: string;
-  issues: Issue[];
-}
-
-interface AnalysisData {
-  summary: {
-    total_files: number;
-    total_issues: number;
-    files_with_issues: number;
-  };
-  results: FileResult[];
-}
 
 function IssuesDisplay() {
   const location = useLocation();
@@ -79,10 +65,7 @@ function IssuesDisplay() {
             const installUrl = `https://github.com/apps/${GITHUB_CLIENT_ID?.split(".")[0] || "autoauditai"}/installations/new`;
             toast.error("GitHub App Not Installed", {
               description: `Please install the GitHub App first. Click here to install.`,
-              action: {
-                label: "Install App",
-                onClick: () => window.open(installUrl, "_blank"),
-              },
+             
               duration: 10000,
             });
           } else {
