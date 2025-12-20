@@ -183,9 +183,10 @@ function Dashboard() {
                 <p className="text-sm text-muted-foreground mb-4">
                   Your GitHub token is securely stored and ready to use for API calls.
                 </p>
-                <div className="flex gap-2">
+                <div className="flex gap-3">
                   <Button
                     variant="default"
+                    size="default"
                     className="flex-1"
                     onClick={() => navigate("/repositories")}
                   >
@@ -194,6 +195,7 @@ function Dashboard() {
                   </Button>
                   <Button
                     variant="outline"
+                    size="default"
                     className="flex-1"
                     onClick={() => navigate("/kestra-setup")}
                   >

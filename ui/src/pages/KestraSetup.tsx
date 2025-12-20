@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Copy, Check, ExternalLink, Info, Terminal, FileCode, Settings, Sparkles } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 
 const KestraSetup = () => {
-  const { owner, repo } = useParams<{ owner: string; repo: string }>();
   const navigate = useNavigate();
   const [aiProvider, setAiProvider] = useState<"openai">("openai");
   const [apiKey, setApiKey] = useState("");
@@ -291,15 +290,15 @@ triggers:
 
     setSaving(true);
     try {
-      const response = await fetch(`${API_URL}/api/repositories/${owner}/${repo}/kestra-config`, {
+      const response = await fetch(`${API_URL}/api/user/kestra-config`, {
         method: "POST",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          kestraWebhookUrl: `${ngrokDomain}/api/v1/executions/webhook/autoaudit/${aiProvider === "openai" ? "issue-assignment-automation" : "issue-assignment-gemini"}/${webhookSecret}`,
-          webhookSecret,
+          kestraWebhookUrlDomain: ngrokDomain,
+          kestraWebhookSecret: webhookSecret,
         }),
       });
 
@@ -308,7 +307,7 @@ triggers:
       }
 
       toast.success("Kestra configuration saved!");
-      navigate(`/repositories/${owner}/${repo}/issues-list`);
+      navigate("/repositories");
     } catch (error) {
       console.error("Error saving config:", error);
       toast.error("Failed to save configuration");
@@ -321,23 +320,14 @@ triggers:
     <div className="min-h-screen bg-background">
       <div className="container-custom py-12">
         <div className="max-w-5xl mx-auto">
-          <div className="flex items-center gap-4 mb-8">
-            <Button
-              onClick={() => navigate(`/repositories/${owner}/${repo}/issues-list`)}
-              variant="outline"
-              size="icon"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <div className="flex-1">
-              <h1 className="text-4xl font-bold mb-2 flex items-center gap-2">
-                <Settings className="w-8 h-8" />
-                Kestra Setup
-              </h1>
-              <p className="text-muted-foreground">
-                {owner}/{repo} - Configure AI-powered issue automation
-              </p>
-            </div>
+          <div className="mb-8">
+            <h1 className="text-4xl font-bold mb-2 flex items-center gap-2">
+              <Settings className="w-8 h-8" />
+              Kestra Setup
+            </h1>
+            <p className="text-muted-foreground">
+              Configure AI-powered issue automation for your repositories
+            </p>
           </div>
 
           <Alert className="mb-6 border-primary/50 bg-primary/5">
@@ -583,10 +573,10 @@ triggers:
 
               <div className="flex gap-3 pt-4">
                 <Button
-                  onClick={() => navigate(`/repositories/${owner}/${repo}/issues-list`)}
+                  onClick={() => navigate("/repositories")}
                   variant="outline"
                 >
-                  Cancel
+                  Back to Repositories
                 </Button>
                 <Button
                   onClick={handleSave}
