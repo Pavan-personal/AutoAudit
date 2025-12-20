@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Github, Search, ArrowLeft, Folder, Sparkles, Brain } from "lucide-react";
+import { Github, Search, ArrowLeft, Folder, Sparkles, Brain, Settings } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -120,20 +120,30 @@ function Repositories() {
     <div className="min-h-screen bg-background">
       <div className="container-custom py-12">
         <div className="max-w-7xl mx-auto">
-          <div className="flex items-center gap-4 mb-8">
-            <Button
-              onClick={() => navigate("/dashboard")}
-              variant="outline"
-              size="icon"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-            <div>
-              <h1 className="text-4xl font-bold mb-2">Repositories</h1>
-              <p className="text-muted-foreground">
-                Select a repository to audit
-              </p>
+          <div className="flex items-center justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <Button
+                onClick={() => navigate("/dashboard")}
+                variant="outline"
+                size="icon"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </Button>
+              <div>
+                <h1 className="text-4xl font-bold mb-2">Repositories</h1>
+                <p className="text-muted-foreground">
+                  Select a repository to audit
+                </p>
+              </div>
             </div>
+            <Button
+              onClick={() => navigate("/kestra-setup")}
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <Settings className="w-4 h-4" />
+              Kestra Setup
+            </Button>
           </div>
 
           <div className="mb-6">

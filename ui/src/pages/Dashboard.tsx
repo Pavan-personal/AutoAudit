@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Github, Mail, User, Calendar } from "lucide-react";
+import { Github, Mail, User, Calendar, FolderGit2, Settings } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -180,16 +180,25 @@ function Dashboard() {
               </div>
 
               <div className="pt-4 border-t border-border">
-                <p className="text-sm text-muted-foreground mb-2">
+                <p className="text-sm text-muted-foreground mb-4">
                   Your GitHub token is securely stored and ready to use for API calls.
                 </p>
                 <div className="flex gap-2">
                   <Button
-                    variant="outline"
-                    size="sm"
+                    variant="default"
+                    className="flex-1"
                     onClick={() => navigate("/repositories")}
                   >
+                    <FolderGit2 className="w-4 h-4 mr-2" />
                     View Repositories
+                  </Button>
+                  <Button
+                    variant="outline"
+                    className="flex-1"
+                    onClick={() => navigate("/kestra-setup")}
+                  >
+                    <Settings className="w-4 h-4 mr-2" />
+                    Kestra Setup
                   </Button>
                 </div>
               </div>
