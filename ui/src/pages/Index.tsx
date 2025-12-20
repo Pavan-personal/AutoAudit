@@ -17,6 +17,14 @@ const Index = () => {
   useEffect(() => {
     async function checkAuth() {
       try {
+        // Check if auth just failed to prevent redirect loop
+        const authFailed = sessionStorage.getItem("auth_failed");
+        if (authFailed) {
+          sessionStorage.removeItem("auth_failed");
+          setIsChecking(false);
+          return;
+        }
+        
         const response = await fetch(`${API_URL}/api/user`, {
           method: "GET",
           credentials: "include",

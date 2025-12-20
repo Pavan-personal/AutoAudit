@@ -71,14 +71,12 @@ function IssuesList() {
 
         if (!response.ok) {
           if (response.status === 401) {
-            const data = await response.json().catch(() => ({}));
-            if (data.expired) {
-              // Token expired - clear cookies and redirect to landing
-              document.cookie.split(";").forEach((c) => {
-                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
-              });
-            }
-            navigate("/");
+            // Clear cookies and redirect to landing
+            document.cookie.split(";").forEach((c) => {
+              document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            sessionStorage.setItem("auth_failed", "true");
+            navigate("/", { replace: true });
             return;
           }
           throw new Error(`HTTP error! status: ${response.status}`);
