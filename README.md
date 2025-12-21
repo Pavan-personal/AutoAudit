@@ -134,8 +134,6 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 51 10 PM" src="https://github.com/user-attachments/assets/ee8a0228-6081-4420-9d70-24ab06f1c7ad" />
 
-### Full codebase scan 
-
 ### Merge Readiness Score
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 51 43 PM" src="https://github.com/user-attachments/assets/09a4610a-c673-454a-b62d-d33462f095f9" />
@@ -261,16 +259,6 @@ VITE_API_URL=http://localhost:3000
 
 ## Live Demo
 
-Visit [AutoAudit](https://your-domain.vercel.app) to see it in action.
-
-## Contributing
-
-Pull requests welcome! Please check existing issues or create a new one.
-
-## License
-
-MIT
-
----
+Visit [AutoAudit](https://autoauditai.vercel.app) to see it in action.
 
 Built for developers who value automation 🤖
