@@ -94,17 +94,17 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 50 14 PM" src="https://github.com/user-attachments/assets/56b02c39-e6d8-43bf-996f-ab0563d9c7a6" />
 
-#### As seen above, the AI initially rejected a casual issue assignment request and asked for a clearer explanation. Once the user shared a solid approach in the comments, the issue was automatically assigned.
+#### As seen above, the Kestra AI agent initially rejected a casual issue assignment request and asked for a clearer explanation. Once the user shared a solid approach in the comments, the issue was automatically assigned.
 
-### Live example 2 (here user causually asked to assign him the issue, rejected!!!)
+### Live example 2 (here user causually asked to assign him the issue, Kestra AI agent rejected!!!)
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 49 33 PM" src="https://github.com/user-attachments/assets/7e7671da-368b-4825-b70e-a168b7898cee" />
 
-### He again commented casually without mentioning his way to approach the issue, rejected!!!
+### He again commented casually without mentioning his way to approach the issue, Kestra AI agent rejected!!!
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 49 42 PM" src="https://github.com/user-attachments/assets/ddeee00c-597a-428f-aa76-0b9a0120cea1" />
 
-### Third time user gave a valid approach to resolve the issue, now accepted and assigned!!!
+### Third time user gave a valid approach to resolve the issue, Kestra AI agent now accepted and assigned!!!
 
 <img width="1470" height="956" alt="Screenshot 2025-12-14 at 10 49 47 PM" src="https://github.com/user-attachments/assets/3cec0cb5-66f4-4996-84bd-40c623b3fb5b" />
 
