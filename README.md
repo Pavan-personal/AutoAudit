@@ -15,6 +15,10 @@ AI-powered GitHub workflow automation that scans codebases, assigns issues intel
 
 <img width="1470" alt="Screenshot 2025-12-14 at 10 37 06 PM" src="https://github.com/user-attachments/assets/2b7f722e-45fe-4a21-a554-efb2ae639548" />
 
+### Kestra AI Agent setup page
+
+<img width="2940" height="4692" alt="screencapture-autoauditai-vercel-app-kestra-setup-2025-12-22-12_46_16" src="https://github.com/user-attachments/assets/f364f550-2bfc-45d6-9ad1-93519d8f693f" />
+
 ### Issue automation live and codescan and github issue creation demo
 
 [![Watch the demo](https://cdn.dribbble.com/userupload/21508690/file/original-bc94311cd15a4e840f4b57bddc73375c.gif)](https://drive.google.com/file/d/1UhYFBKqvOoQ2d9AnHQUuFtwaQyzjBnDt/view?usp=sharing)
